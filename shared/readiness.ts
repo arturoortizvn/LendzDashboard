@@ -1,6 +1,8 @@
 export interface ReadinessPayload {
   asOf: string
   modules: Module[]
+  source?: 'live' | 'baseline'
+  builtAt?: string
 }
 
 export type Module = DeliveryModule | MeasurementModule
@@ -67,7 +69,7 @@ export interface MeasurementModule {
 }
 
 export function buildPayload(now: string): ReadinessPayload {
-  return { asOf: now, modules: MODULES }
+  return { asOf: now, modules: MODULES, source: 'baseline' }
 }
 
 const bank: MeasurementModule = {
@@ -299,3 +301,7 @@ const tax: DeliveryModule = {
 }
 
 export const MODULES: Module[] = [pe, vt, uw, lexi, bank, id, tax]
+
+export const MODULES_BY_KEY: Record<string, Module> = Object.fromEntries(
+  MODULES.map((m) => [m.key, m]),
+)

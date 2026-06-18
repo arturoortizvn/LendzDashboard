@@ -12,7 +12,7 @@ test('writeLatest puts the JSON at the fixed path with overwrite enabled', async
   expect(put).toHaveBeenCalledWith(
     'readiness/latest.json',
     JSON.stringify(payload),
-    expect.objectContaining({ access: 'public', addRandomSuffix: false, allowOverwrite: true }),
+    expect.objectContaining({ access: 'public', contentType: 'application/json', addRandomSuffix: false, allowOverwrite: true }),
   )
 })
 
@@ -26,5 +26,12 @@ test('readLatest returns the parsed payload', async () => {
 test('readLatest returns null when the blob is missing', async () => {
   vi.mocked(head).mockRejectedValue(new Error('BlobNotFound'))
   const p = await readLatest()
+  expect(p).toBeNull()
+})
+
+test('readLatest returns null when fetch returns a non-ok response', async () => {
+  vi.mocked(head).mockResolvedValue({ url: 'https://blob/readiness/latest.json' } as never)
+  const fetchImpl = vi.fn().mockResolvedValue({ ok: false, status: 404, json: () => Promise.resolve(null) })
+  const p = await readLatest(fetchImpl as unknown as typeof fetch)
   expect(p).toBeNull()
 })

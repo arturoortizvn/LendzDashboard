@@ -1,0 +1,4 @@
+# Test files must not be deployed: Vercel turns every file under api/ into a
+# serverless function, so api/*.test.ts would ship a bogus /api/*.test endpoint.
+*.test.ts
+*.test.tsx

@@ -1,0 +1,1369 @@
+# Final whole-branch review package: 527d0b1..HEAD (product code only)
+# Excludes docs/superpowers/** (SDD process artifacts: briefs, reports, committed diffs).
+
+## Commits (full branch since plan)
+5cd89bc Fix tsc -b build: make tsconfig.node composite, ignore tsbuildinfo
+b4b2408 Strengthen App load assertion to expect both name occurrences
+a876093 Wire App: fetch states, tab routing, panel rendering
+c4a2af3 Add MeasurementPanel component
+16fc0dd Add DeliveryPanel component
+42cc047 Add Masthead and Tabs components
+e90de2b Add MetricsTable component
+c2b9a92 Guard BucketColumn count with != null to admit "0"
+8abdb64 Add BucketColumn component
+342a8eb Add AssumedBadge, ProgressBar, InfoTooltip leaf components
+3337ddc Add typed readiness API client
+8cb7782 Add /api/readiness serverless function and Vercel config
+fd6578b Add Scaffolding done assumedLabel to id and tax fixtures
+ddddcaf Add readiness data contract, fixture, and buildPayload
+faad91c Add Task 3 brief
+6d1a7f2 Update Task 2 report with fix notes; add re-review diff
+c3a87d3 Remove duplicate .assumed/.wt rules from app.css
+b304296 Store SDD briefs and diffs under docs/superpowers
+bf6872d Store SDD task reports under docs/superpowers/reports
+0a51247 Port PoC stylesheet into the React app
+100fa15 Scaffold Vite + React + TS project with Vitest harness
+
+## Files changed (product paths)
+ .gitignore                               |   3 +
+ api/readiness.test.ts                    |  22 +++
+ api/readiness.ts                         |   7 +
+ index.html                               |  12 ++
+ package.json                             |  30 +++
+ shared/readiness.test.ts                 |  25 +++
+ shared/readiness.ts                      | 301 +++++++++++++++++++++++++++++++
+ src/App.test.tsx                         |  26 +++
+ src/App.tsx                              |  48 +++++
+ src/api.test.ts                          |  15 ++
+ src/api.ts                               |   9 +
+ src/components/AssumedBadge.tsx          |   3 +
+ src/components/BucketColumn.test.tsx     |  16 ++
+ src/components/BucketColumn.tsx          |  29 +++
+ src/components/DeliveryPanel.test.tsx    |  24 +++
+ src/components/DeliveryPanel.tsx         |  56 ++++++
+ src/components/InfoTooltip.tsx           |   9 +
+ src/components/Masthead.test.tsx         |   8 +
+ src/components/Masthead.tsx              |  15 ++
+ src/components/MeasurementPanel.test.tsx |  23 +++
+ src/components/MeasurementPanel.tsx      |  46 +++++
+ src/components/MetricsTable.test.tsx     |  16 ++
+ src/components/MetricsTable.tsx          |  41 +++++
+ src/components/ProgressBar.tsx           |  21 +++
+ src/components/Tabs.test.tsx             |  18 ++
+ src/components/Tabs.tsx                  |  24 +++
+ src/components/leaf.test.tsx             |  19 ++
+ src/main.tsx                             |  10 +
+ src/styles/app.css                       | 120 ++++++++++++
+ src/styles/styles.test.ts                |  13 ++
+ src/test/setup.ts                        |   1 +
+ src/vite-env.d.ts                        |   1 +
+ tsconfig.json                            |  23 +++
+ tsconfig.node.json                       |  16 ++
+ vercel.json                              |   6 +
+ vite.config.ts                           |  12 ++
+ 36 files changed, 1068 insertions(+)
+
+## Diff (product paths, -U10)
+diff --git a/.gitignore b/.gitignore
+index 5a02982..a9c948e 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -2,20 +2,23 @@
+ node_modules/
+ 
+ # Build output
+ dist/
+ dist-ssr/
+ build/
+ 
+ # Vite
+ .vite/
+ 
++# TypeScript incremental build info
++*.tsbuildinfo
++
+ # Environment / secrets
+ .env
+ .env.*
+ !.env.example
+ 
+ # Vercel
+ .vercel/
+ 
+ # Editor / OS
+ .DS_Store
+diff --git a/api/readiness.test.ts b/api/readiness.test.ts
+new file mode 100644
+index 0000000..54c5197
+--- /dev/null
++++ b/api/readiness.test.ts
+@@ -0,0 +1,22 @@
++import type { VercelRequest, VercelResponse } from '@vercel/node'
++import handler from './readiness'
++
++function mockRes() {
++  const res: Partial<VercelResponse> & { body?: unknown; statusCode?: number; headers: Record<string, string> } = {
++    headers: {},
++    setHeader(k: string, v: string) { this.headers[k] = v; return this as VercelResponse },
++    status(code: number) { this.statusCode = code; return this as VercelResponse },
++    json(payload: unknown) { this.body = payload; return this as VercelResponse },
++  }
++  return res
++}
++
++test('returns a 200 payload with asOf and seven modules', () => {
++  const res = mockRes()
++  handler({} as VercelRequest, res as VercelResponse)
++  expect(res.statusCode).toBe(200)
++  const body = res.body as { asOf: string; modules: unknown[] }
++  expect(typeof body.asOf).toBe('string')
++  expect(body.modules).toHaveLength(7)
++  expect(res.headers['Cache-Control']).toContain('s-maxage')
++})
+diff --git a/api/readiness.ts b/api/readiness.ts
+new file mode 100644
+index 0000000..64150db
+--- /dev/null
++++ b/api/readiness.ts
+@@ -0,0 +1,7 @@
++import type { VercelRequest, VercelResponse } from '@vercel/node'
++import { buildPayload } from '../shared/readiness'
++
++export default function handler(_req: VercelRequest, res: VercelResponse) {
++  res.setHeader('Cache-Control', 's-maxage=900, stale-while-revalidate=1800')
++  res.status(200).json(buildPayload(new Date().toISOString()))
++}
+diff --git a/index.html b/index.html
+new file mode 100644
+index 0000000..2c26bd6
+--- /dev/null
++++ b/index.html
+@@ -0,0 +1,12 @@
++<!doctype html>
++<html lang="en">
++  <head>
++    <meta charset="UTF-8" />
++    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
++    <title>LendLogic — Delivery Readiness Console</title>
++  </head>
++  <body>
++    <div id="root"></div>
++    <script type="module" src="/src/main.tsx"></script>
++  </body>
++</html>
+diff --git a/package.json b/package.json
+new file mode 100644
+index 0000000..7640350
+--- /dev/null
++++ b/package.json
+@@ -0,0 +1,30 @@
++{
++  "name": "lendz-dashboard",
++  "private": true,
++  "version": "0.1.0",
++  "type": "module",
++  "scripts": {
++    "dev": "vite",
++    "build": "tsc -b && vite build",
++    "preview": "vite preview",
++    "test": "vitest run",
++    "test:watch": "vitest"
++  },
++  "dependencies": {
++    "react": "^19.0.0",
++    "react-dom": "^19.0.0"
++  },
++  "devDependencies": {
++    "@testing-library/jest-dom": "^6.6.3",
++    "@testing-library/react": "^16.1.0",
++    "@testing-library/user-event": "^14.5.2",
++    "@types/react": "^19.0.0",
++    "@types/react-dom": "^19.0.0",
++    "@vercel/node": "^3.2.0",
++    "@vitejs/plugin-react": "^4.3.4",
++    "jsdom": "^25.0.1",
++    "typescript": "^5.6.3",
++    "vite": "^6.0.0",
++    "vitest": "^3.0.0"
++  }
++}
+diff --git a/shared/readiness.test.ts b/shared/readiness.test.ts
+new file mode 100644
+index 0000000..4292b9a
+--- /dev/null
++++ b/shared/readiness.test.ts
+@@ -0,0 +1,25 @@
++import { MODULES, buildPayload } from './readiness'
++
++test('exposes seven modules in PoC tab order', () => {
++  expect(MODULES.map((m) => m.key)).toEqual(['pe', 'vt', 'uw', 'lexi', 'bank', 'id', 'tax'])
++})
++
++test('flags exactly the assumed modules', () => {
++  const assumed = MODULES.filter((m) => m.phase === 'delivery' && m.assumed).map((m) => m.key)
++  expect(assumed.sort()).toEqual(['id', 'tax', 'vt'])
++})
++
++test('bank is the only measurement module and carries the 77 composite', () => {
++  const bank = MODULES.find((m) => m.key === 'bank')!
++  expect(bank.phase).toBe('measurement')
++  if (bank.phase === 'measurement') {
++    expect(bank.composite).toEqual({ value: 77, denominator: 97, costExcluded: true })
++    expect(bank.metrics).toHaveLength(6)
++  }
++})
++
++test('buildPayload stamps asOf and returns the modules', () => {
++  const p = buildPayload('2026-06-17T14:00:00Z')
++  expect(p.asOf).toBe('2026-06-17T14:00:00Z')
++  expect(p.modules).toBe(MODULES)
++})
+diff --git a/shared/readiness.ts b/shared/readiness.ts
+new file mode 100644
+index 0000000..3e8aa9a
+--- /dev/null
++++ b/shared/readiness.ts
+@@ -0,0 +1,301 @@
++export interface ReadinessPayload {
++  asOf: string
++  modules: Module[]
++}
++
++export type Module = DeliveryModule | MeasurementModule
++export type Status = 'on_track' | 'in_progress' | 'early' | 'at_risk' | 'blocked'
++export type DateConfidence = 'committed' | 'projected'
++
++export interface BucketItem {
++  title: string
++  detail?: string
++  weight?: number
++}
++
++export interface DeliveryModule {
++  key: string
++  name: string
++  sub: string
++  phase: 'delivery'
++  percent: number
++  status: Status
++  statusLabel: string
++  note: string
++  targetDate: string
++  dateConfidence: DateConfidence
++  assumed: boolean
++  assumedLabel?: string
++  accentColor?: string
++  counts: { delivered: number; inProgress: number; remaining: number }
++  buckets: {
++    delivered: BucketItem[]
++    inProgress: BucketItem[]
++    remaining: BucketItem[]
++  }
++}
++
++export interface Metric {
++  capability: string
++  weight: number
++  current: string
++  target: string
++  status: 'at_target' | 'near' | 'blocked' | 'no_target'
++  statusLabel: string
++}
++
++export interface MeasurementModule {
++  key: 'bank'
++  name: string
++  sub: string
++  phase: 'measurement'
++  percent: number
++  status: Status
++  statusLabel: string
++  note: string
++  targetDate: string
++  dateConfidence: DateConfidence
++  capabilitiesAtStandard: { count: number; of: number }
++  composite: { value: number; denominator: number; costExcluded: boolean }
++  gapNote: string
++  metrics: Metric[]
++  buckets: {
++    achieved: BucketItem[]
++    holding: BucketItem[]
++    mustComplete: BucketItem[]
++  }
++}
++
++export function buildPayload(now: string): ReadinessPayload {
++  return { asOf: now, modules: MODULES }
++}
++
++const bank: MeasurementModule = {
++  key: 'bank',
++  name: 'Bank Statement Analyzer',
++  sub: 'Production-readiness measurement across six capabilities.',
++  phase: 'measurement',
++  percent: 77,
++  status: 'on_track',
++  statusLabel: 'On track',
++  note: 'Weighted across five scored capabilities by business impact. Reads accuracy heaviest.',
++  targetDate: '~6 July',
++  dateConfidence: 'projected',
++  capabilitiesAtStandard: { count: 4, of: 6 },
++  composite: { value: 77, denominator: 97, costExcluded: true },
++  gapNote:
++    'We are 23 points from 100: one capability is fully blocked and scoring zero (20 pts), two are a hair under target (~2 pts), and cost is parked until finance sets a baseline.',
++  metrics: [
++    { capability: 'Reads statements correctly', weight: 30, current: '93.8%', target: '95%', status: 'at_target', statusLabel: 'At target' },
++    { capability: 'Catches problems a human would', weight: 25, current: '91% / 82%', target: '90% / 80%', status: 'at_target', statusLabel: 'At target' },
++    { capability: 'Output the system trusts', weight: 20, current: 'Not emitted', target: '70%', status: 'blocked', statusLabel: 'Blocked' },
++    { capability: 'Handles statement variety', weight: 15, current: '78%', target: '85%', status: 'near', statusLabel: 'Near' },
++    { capability: 'Fast enough for the workflow', weight: 7, current: 'p95 99s', target: 'p95 < 90s', status: 'near', statusLabel: 'Near' },
++    { capability: 'Economical at scale', weight: 3, current: 'Measured / TBD', target: 'TBD', status: 'no_target', statusLabel: 'No target' },
++  ],
++  buckets: {
++    achieved: [
++      { title: 'Reads statements correctly.', weight: 30, detail: 'Extraction at the quality bar and steady.' },
++      { title: 'Catches problems a human would.', weight: 25, detail: 'Detection holding above standard.' },
++    ],
++    holding: [
++      { title: 'Handles statement variety.', weight: 15, detail: 'Most processed end to end, gap closing.' },
++      { title: 'Fast enough for the workflow.', weight: 7, detail: 'Trending to target.' },
++    ],
++    mustComplete: [
++      { title: 'Output the system trusts.', weight: 20, detail: 'Blocked on the output contract.' },
++      { title: 'Cost at scale.', weight: 3, detail: 'Baseline pending finance input.' },
++    ],
++  },
++}
++
++const pe: DeliveryModule = {
++  key: 'pe',
++  name: 'Pricing & Eligibility',
++  sub: 'Pricing engine, eligibility evaluation, product and rules catalogs.',
++  phase: 'delivery',
++  percent: 71,
++  status: 'on_track',
++  statusLabel: 'On track',
++  note: '53 of 75 tracked stories accepted. The most mature module on the program.',
++  targetDate: '11 July',
++  dateConfidence: 'committed',
++  assumed: false,
++  counts: { delivered: 53, inProgress: 14, remaining: 8 },
++  buckets: {
++    delivered: [
++      { title: 'Product catalog and field library.', detail: 'Loan attributes modeled, loanPASS-aligned.' },
++      { title: 'Rules engine, end to end.', detail: 'Backend, frontend, and CI/CD all live.' },
++      { title: 'Eligibility against real prequal data.', detail: 'Evaluates actual scenarios, explains each qualify or decline.' },
++      { title: 'Add and modify products and rules.', detail: 'Admin can author eligibility and pricing without code.' },
++    ],
++    inProgress: [
++      { title: 'Final price calculation.', detail: 'Refining the full price build-up.' },
++      { title: 'Pricing accuracy fixes.', detail: 'CLTV bands, LPC, escrow waiver, scope-wins precedence.' },
++      { title: 'Evaluation performance.', detail: 'Faster price evaluation in review.' },
++    ],
++    remaining: [
++      { title: 'Load Series 2 through Z rules.', detail: 'Currently blocked, the main remaining lift.' },
++      { title: 'Admin draft and publish workflow.', detail: 'Separate admin edits from the live calculator.' },
++      { title: 'Residual calculation fixes.', detail: 'Field dependencies and edge cases.' },
++    ],
++  },
++}
++
++const vt: DeliveryModule = {
++  key: 'vt',
++  name: 'Verified Truth',
++  sub: 'Governed, evidence-backed loan state. Currently defining the data model and integration contract.',
++  phase: 'delivery',
++  percent: 55,
++  status: 'in_progress',
++  statusLabel: 'In design',
++  note: 'Data model and integration contract substantially in place. The governed lifecycle is the remaining build. Figures assumed.',
++  targetDate: '6 July',
++  dateConfidence: 'committed',
++  assumed: true,
++  assumedLabel: 'Architecture phase',
++  accentColor: '#7A5FD0',
++  // bcount strings are non-numeric; counts derived from bucket item count (delivered) and card bignum (inProgress, remaining)
++  counts: { delivered: 3, inProgress: 1, remaining: 4 },
++  buckets: {
++    delivered: [
++      { title: 'Integration-contract principle.', detail: 'Verified Truth established as the contract between modules, not point-to-point calls.' },
++      { title: 'Downstream reaction model.', detail: 'How a truth change drives pricing, conditions, and underwriting is defined.' },
++      { title: 'Truth record data model.', detail: 'Versioned scenario state per loan, designed and locked.' },
++    ],
++    inProgress: [
++      { title: 'Provenance and versioning.', detail: 'Each value linked to the evidence version behind it. Being finalized.' },
++    ],
++    remaining: [
++      { title: 'Propose, approve, publish.', detail: 'The governance workflow for every truth change.' },
++      { title: 'Auto-recalculate on publish.', detail: 'Conditions, readiness, and pricing react automatically.' },
++      { title: 'Version history view.', detail: 'Reconstruct the decision trail at any point.' },
++    ],
++  },
++}
++
++const uw: DeliveryModule = {
++  key: 'uw',
++  name: 'Underwriting',
++  sub: 'Analyzer framework and verification center.',
++  phase: 'delivery',
++  percent: 69,
++  status: 'on_track',
++  statusLabel: 'On track',
++  note: '9 of 13 framework stories accepted. Core analyzer plumbing is live.',
++  targetDate: 'mid-August',
++  dateConfidence: 'committed',
++  assumed: false,
++  accentColor: '#1E8E7E',
++  counts: { delivered: 9, inProgress: 0, remaining: 4 },
++  buckets: {
++    delivered: [
++      { title: 'Analyzer framework.', detail: 'Structured findings, manual trigger, full run history.' },
++      { title: 'Auto re-run on new evidence.', detail: 'Replacement evidence re-triggers the right analyzers.' },
++      { title: 'Analyzer service and workbench UI.', detail: 'Built and operational.' },
++    ],
++    inProgress: [
++      { title: 'Individual analyzers.', detail: 'Bank and ID tracked on their own tabs.' },
++    ],
++    remaining: [
++      { title: 'Verification center.', detail: 'Unified findings and discrepancy view for the underwriter.' },
++      { title: 'Discrepancy accept and reject.', detail: 'With permanently recorded reason codes.' },
++      { title: 'Truth-proposal handoff.', detail: 'The same output-contract dependency that gates the analyzers.' },
++    ],
++  },
++}
++
++const lexi: DeliveryModule = {
++  key: 'lexi',
++  name: 'Lexi Intelligence',
++  sub: 'Agent orchestration and Generative UI. v1 is back online answering questions from pricing data.',
++  phase: 'delivery',
++  percent: 55,
++  status: 'in_progress',
++  statusLabel: 'In progress',
++  note: '11 of 20 stories accepted. v1 orchestration and the Generative UI kit are live.',
++  targetDate: '6 July',
++  dateConfidence: 'committed',
++  assumed: false,
++  accentColor: '#C77DBB',
++  counts: { delivered: 11, inProgress: 0, remaining: 9 },
++  buckets: {
++    delivered: [
++      { title: 'Orchestration v1.', detail: 'Plan generation, sequencing, live progress.' },
++      { title: 'Generative UI kit.', detail: 'Component library and interactive form flow with validation.' },
++      { title: 'Edit-from-chat.', detail: 'First end-to-end agent use case, plus direct field updates.' },
++    ],
++    inProgress: [
++      { title: 'Q&A on pricing data.', detail: 'Lexi answers from the engine, surfaced through Slack for now.' },
++    ],
++    remaining: [
++      { title: 'Background autonomy.', detail: 'Auto-detect evidence, trigger analyzers, plan remediation for gaps.' },
++      { title: 'Truth-proposal routing.', detail: 'Generate proposals from findings, route to the right approver.' },
++      { title: 'Approval surface and resilience.', detail: 'Approve or reject in the workflow view, retry and recovery.' },
++    ],
++  },
++}
++
++const id: DeliveryModule = {
++  key: 'id',
++  name: 'ID Analyzer',
++  sub: 'Identity document extraction and validation.',
++  phase: 'delivery',
++  percent: 30,
++  status: 'early',
++  statusLabel: 'Early build',
++  note: 'Inherits the live analyzer framework. Identity-specific extraction and validation ahead. Figures assumed.',
++  targetDate: '1 July',
++  dateConfidence: 'committed',
++  assumed: true,
++  assumedLabel: 'Scaffolding done',
++  accentColor: '#E0913B',
++  // delivered bcount is "inherited foundation" (1 item); inProgress card shows 1; remaining card shows "—" (2 items listed)
++  counts: { delivered: 1, inProgress: 1, remaining: 2 },
++  buckets: {
++    delivered: [
++      { title: 'Analyzer framework.', detail: 'Structured findings, provenance, run history, auto re-run all reused.' },
++    ],
++    inProgress: [
++      { title: 'Identity field extraction.', detail: 'Name, date of birth, document number, issue and expiry, issuing authority.' },
++    ],
++    remaining: [
++      { title: 'Validation and flags.', detail: 'Expired ID, name or date-of-birth mismatch against the application and credit data.' },
++      { title: 'Eligibility checks.', detail: 'Document type and residency status against program rules.' },
++    ],
++  },
++}
++
++const tax: DeliveryModule = {
++  key: 'tax',
++  name: 'Tax Docs Analyzer',
++  sub: 'Tax form extraction. Planned for Release Two.',
++  phase: 'delivery',
++  percent: 30,
++  status: 'early',
++  statusLabel: 'Early build',
++  note: 'Framework scaffolding in place. Form-specific extraction is the bulk of the work, planned for Release Two. Figures assumed.',
++  targetDate: '3 July',
++  dateConfidence: 'committed',
++  assumed: true,
++  assumedLabel: 'Scaffolding done',
++  accentColor: '#5A8FB5',
++  // delivered bcount "inherited foundation" (1 item); inProgress card "—" (1 item); remaining card "—" (3 items)
++  counts: { delivered: 1, inProgress: 1, remaining: 3 },
++  buckets: {
++    delivered: [
++      { title: 'Analyzer framework.', detail: 'The same structured-findings and provenance plumbing the other analyzers use.' },
++    ],
++    inProgress: [
++      { title: 'Coverage definition.', detail: 'Which forms, which fields, which discrepancy checks.' },
++    ],
++    remaining: [
++      { title: 'Personal returns.', detail: 'Form 1040 with all schedules: AGI, wages, self-employment, rental income.' },
++      { title: 'Business returns.', detail: 'Forms 1065, 1120-S, 1120: revenue, ordinary income, distributions, ownership.' },
++      { title: 'Income forms.', detail: 'W-2, the 1099 family, and Schedule K-1 variants.' },
++    ],
++  },
++}
++
++export const MODULES: Module[] = [pe, vt, uw, lexi, bank, id, tax]
+diff --git a/src/App.test.tsx b/src/App.test.tsx
+new file mode 100644
+index 0000000..8a08a5b
+--- /dev/null
++++ b/src/App.test.tsx
+@@ -0,0 +1,26 @@
++import { render, screen, waitFor } from '@testing-library/react'
++import userEvent from '@testing-library/user-event'
++import { afterEach, expect, test, vi } from 'vitest'
++import App from './App'
++import { buildPayload } from '../shared/readiness'
++
++vi.mock('./api', () => ({
++  fetchReadiness: vi.fn(() => Promise.resolve(buildPayload('2026-06-17T14:00:00Z'))),
++}))
++
++afterEach(() => vi.clearAllMocks())
++
++test('renders the first module after load and switches tabs', async () => {
++  render(<App />)
++  // 2 = the active tab button plus the rendered panel's mtitle
++  await waitFor(() => expect(screen.getAllByText('Pricing & Eligibility')).toHaveLength(2))
++  await userEvent.click(screen.getByRole('tab', { name: /Bank Statement Analyzer/ }))
++  expect(screen.getByText('Capabilities at standard')).toBeInTheDocument()
++})
++
++test('shows an error card when the fetch fails', async () => {
++  const { fetchReadiness } = await import('./api')
++  vi.mocked(fetchReadiness).mockRejectedValueOnce(new Error('boom'))
++  render(<App />)
++  await waitFor(() => expect(screen.getByText(/Could not load the console/)).toBeInTheDocument())
++})
+diff --git a/src/App.tsx b/src/App.tsx
+new file mode 100644
+index 0000000..f64dcad
+--- /dev/null
++++ b/src/App.tsx
+@@ -0,0 +1,48 @@
++import { useEffect, useState } from 'react'
++import type { Module, ReadinessPayload } from '../shared/readiness'
++import { fetchReadiness } from './api'
++import { Masthead } from './components/Masthead'
++import { Tabs } from './components/Tabs'
++import { DeliveryPanel } from './components/DeliveryPanel'
++import { MeasurementPanel } from './components/MeasurementPanel'
++
++function renderPanel(m: Module) {
++  return m.phase === 'measurement'
++    ? <MeasurementPanel module={m} />
++    : <DeliveryPanel module={m} />
++}
++
++export default function App() {
++  const [payload, setPayload] = useState<ReadinessPayload | null>(null)
++  const [error, setError] = useState<string | null>(null)
++  const [activeKey, setActiveKey] = useState<string | null>(null)
++
++  useEffect(() => {
++    const ctrl = new AbortController()
++    fetchReadiness(ctrl.signal)
++      .then((p) => {
++        setPayload(p)
++        setActiveKey(p.modules[0]?.key ?? null)
++      })
++      .catch((e: Error) => {
++        if (e.name !== 'AbortError') setError(e.message)
++      })
++    return () => ctrl.abort()
++  }, [])
++
++  if (error) {
++    return <div className="wrap"><div className="card">Could not load the console: {error}</div></div>
++  }
++  if (!payload || !activeKey) {
++    return <div className="wrap"><div className="card">Loading…</div></div>
++  }
++
++  const active = payload.modules.find((m) => m.key === activeKey)!
++  return (
++    <div className="wrap">
++      <Masthead asOf={payload.asOf} />
++      <Tabs modules={payload.modules} activeKey={activeKey} onSelect={setActiveKey} />
++      {renderPanel(active)}
++    </div>
++  )
++}
+diff --git a/src/api.test.ts b/src/api.test.ts
+new file mode 100644
+index 0000000..a095d1c
+--- /dev/null
++++ b/src/api.test.ts
+@@ -0,0 +1,15 @@
++import { afterEach, expect, test, vi } from 'vitest'
++import { fetchReadiness } from './api'
++
++afterEach(() => vi.unstubAllGlobals())
++
++test('returns the parsed payload on success', async () => {
++  const payload = { asOf: 'x', modules: [] }
++  vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve(payload) }))
++  await expect(fetchReadiness()).resolves.toEqual(payload)
++})
++
++test('throws on non-ok response', async () => {
++  vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 500 }))
++  await expect(fetchReadiness()).rejects.toThrow(/500/)
++})
+diff --git a/src/api.ts b/src/api.ts
+new file mode 100644
+index 0000000..e937c20
+--- /dev/null
++++ b/src/api.ts
+@@ -0,0 +1,9 @@
++import type { ReadinessPayload } from '../shared/readiness'
++
++export async function fetchReadiness(signal?: AbortSignal): Promise<ReadinessPayload> {
++  const res = await fetch('/api/readiness', { signal })
++  if (!res.ok) {
++    throw new Error(`Failed to load readiness data (${res.status})`)
++  }
++  return (await res.json()) as ReadinessPayload
++}
+diff --git a/src/components/AssumedBadge.tsx b/src/components/AssumedBadge.tsx
+new file mode 100644
+index 0000000..fbde4b4
+--- /dev/null
++++ b/src/components/AssumedBadge.tsx
+@@ -0,0 +1,3 @@
++export function AssumedBadge({ text }: { text: string }) {
++  return <span className="assumed">{text}</span>
++}
+diff --git a/src/components/BucketColumn.test.tsx b/src/components/BucketColumn.test.tsx
+new file mode 100644
+index 0000000..048d7b7
+--- /dev/null
++++ b/src/components/BucketColumn.test.tsx
+@@ -0,0 +1,16 @@
++import { render, screen } from '@testing-library/react'
++import { BucketColumn } from './BucketColumn'
++
++test('renders title and item leads', () => {
++  render(
++    <BucketColumn
++      tone="green"
++      title="Delivered"
++      count="53 stories"
++      items={[{ title: 'Product catalog', detail: 'and field library.' }]}
++    />,
++  )
++  expect(screen.getByText('Delivered')).toBeInTheDocument()
++  expect(screen.getByText('53 stories')).toBeInTheDocument()
++  expect(screen.getByText('Product catalog')).toBeInTheDocument()
++})
+diff --git a/src/components/BucketColumn.tsx b/src/components/BucketColumn.tsx
+new file mode 100644
+index 0000000..3f658f0
+--- /dev/null
++++ b/src/components/BucketColumn.tsx
+@@ -0,0 +1,29 @@
++import type { BucketItem } from '../../shared/readiness'
++
++type Tone = 'green' | 'amber' | 'grey' | 'red'
++
++export function BucketColumn({ tone, title, count, items }: {
++  tone: Tone
++  title: string
++  count?: string
++  items: BucketItem[]
++}) {
++  return (
++    <div className={`bucket ${tone}`}>
++      <div className="bhead">
++        <span className="ico" />
++        <span className="ttl">{title}</span>
++      </div>
++      {count != null && <div className="bcount">{count}</div>}
++      {items.map((it, i) => (
++        <div className="item" key={i}>
++          <b>
++            {it.title}
++            {it.weight != null && <span className="wt">{it.weight}%</span>}
++          </b>
++          {it.detail ? ` ${it.detail}` : ''}
++        </div>
++      ))}
++    </div>
++  )
++}
+diff --git a/src/components/DeliveryPanel.test.tsx b/src/components/DeliveryPanel.test.tsx
+new file mode 100644
+index 0000000..2774db3
+--- /dev/null
++++ b/src/components/DeliveryPanel.test.tsx
+@@ -0,0 +1,24 @@
++import { render, screen } from '@testing-library/react'
++import { DeliveryPanel } from './DeliveryPanel'
++import type { DeliveryModule } from '../../shared/readiness'
++
++const m: DeliveryModule = {
++  key: 'pe', name: 'Pricing & Eligibility', sub: 'Pricing engine.', phase: 'delivery',
++  percent: 71, status: 'on_track', statusLabel: 'On track', note: '53 of 75 accepted.',
++  targetDate: '11 July', dateConfidence: 'committed', assumed: false,
++  counts: { delivered: 53, inProgress: 14, remaining: 8 },
++  buckets: {
++    delivered: [{ title: 'Product catalog' }],
++    inProgress: [{ title: 'Final price calc' }],
++    remaining: [{ title: 'Series 2 rules' }],
++  },
++}
++
++test('renders module name, percent, and three buckets', () => {
++  render(<DeliveryPanel module={m} />)
++  expect(screen.getByText('Pricing & Eligibility')).toBeInTheDocument()
++  expect(screen.getByText('71')).toBeInTheDocument()
++  expect(screen.getByText('Delivered')).toBeInTheDocument()
++  expect(screen.getByText('In Progress')).toBeInTheDocument()
++  expect(screen.getAllByText('Remaining')).toHaveLength(2)
++})
+diff --git a/src/components/DeliveryPanel.tsx b/src/components/DeliveryPanel.tsx
+new file mode 100644
+index 0000000..a31b77a
+--- /dev/null
++++ b/src/components/DeliveryPanel.tsx
+@@ -0,0 +1,56 @@
++import type { DeliveryModule, Status } from '../../shared/readiness'
++import { ProgressBar } from './ProgressBar'
++import { BucketColumn } from './BucketColumn'
++import { AssumedBadge } from './AssumedBadge'
++
++const PILL: Record<Status, string> = {
++  on_track: 'green',
++  in_progress: 'blue',
++  early: 'grey',
++  at_risk: 'amber',
++  blocked: 'red',
++}
++
++export function DeliveryPanel({ module: m }: { module: DeliveryModule }) {
++  return (
++    <div className="panel active" role="tabpanel">
++      <div className="modband" style={m.accentColor ? { borderLeftColor: m.accentColor } : undefined}>
++        <div>
++          <div className="mtitle">
++            {m.name}
++            {m.assumed && m.assumedLabel ? <> <AssumedBadge text={m.assumedLabel} /></> : null}
++          </div>
++          <div className="msub">{m.sub}</div>
++        </div>
++        <div className="release">
++          Target
++          <b className={m.dateConfidence === 'projected' ? 'est' : ''}>{m.targetDate}</b>
++        </div>
++      </div>
++      <div className="row3">
++        <div className="card">
++          <div className="label">Delivery progress</div>
++          <div>
++            <span className="bignum">{m.percent}<span className="unit">%</span></span>
++            <span className={`pill ${PILL[m.status]}`}>{m.statusLabel}</span>
++          </div>
++          <ProgressBar percent={m.percent} color={m.accentColor} />
++          <div className="note">{m.note}</div>
++        </div>
++        <div className="card">
++          <div className="label">In progress</div>
++          <div className="bignum">{m.counts.inProgress}</div>
++        </div>
++        <div className="card">
++          <div className="label">Remaining</div>
++          <div className="bignum">{m.counts.remaining}</div>
++        </div>
++      </div>
++      <div className="buckets">
++        <BucketColumn tone="green" title="Delivered" count={`${m.counts.delivered} stories`} items={m.buckets.delivered} />
++        <BucketColumn tone="amber" title="In Progress" count={`${m.counts.inProgress} stories`} items={m.buckets.inProgress} />
++        <BucketColumn tone="grey" title="Remaining" count={`${m.counts.remaining} stories`} items={m.buckets.remaining} />
++      </div>
++    </div>
++  )
++}
+diff --git a/src/components/InfoTooltip.tsx b/src/components/InfoTooltip.tsx
+new file mode 100644
+index 0000000..c53334f
+--- /dev/null
++++ b/src/components/InfoTooltip.tsx
+@@ -0,0 +1,9 @@
++import type { ReactNode } from 'react'
++
++export function InfoTooltip({ children, flipLeft }: { children: ReactNode; flipLeft?: boolean }) {
++  return (
++    <span className={`info${flipLeft ? ' tip-left' : ''}`} tabIndex={0}>
++      i<span className="tip">{children}</span>
++    </span>
++  )
++}
+diff --git a/src/components/Masthead.test.tsx b/src/components/Masthead.test.tsx
+new file mode 100644
+index 0000000..659aa98
+--- /dev/null
++++ b/src/components/Masthead.test.tsx
+@@ -0,0 +1,8 @@
++import { render, screen } from '@testing-library/react'
++import { Masthead } from './Masthead'
++
++test('renders the brand', () => {
++  render(<Masthead asOf="2026-06-17T14:00:00Z" />)
++  expect(screen.getByText('LendLogic')).toBeInTheDocument()
++  expect(screen.getByText('Delivery Readiness Console')).toBeInTheDocument()
++})
+diff --git a/src/components/Masthead.tsx b/src/components/Masthead.tsx
+new file mode 100644
+index 0000000..2648198
+--- /dev/null
++++ b/src/components/Masthead.tsx
+@@ -0,0 +1,15 @@
++export function Masthead({ asOf }: { asOf: string }) {
++  const when = new Date(asOf).toLocaleString()
++  return (
++    <div className="masthead">
++      <div className="brand">
++        LendLogic
++        <span>Delivery Readiness Console</span>
++      </div>
++      <div className="asof">
++        as of
++        <b>{when}</b>
++      </div>
++    </div>
++  )
++}
+diff --git a/src/components/MeasurementPanel.test.tsx b/src/components/MeasurementPanel.test.tsx
+new file mode 100644
+index 0000000..34d953e
+--- /dev/null
++++ b/src/components/MeasurementPanel.test.tsx
+@@ -0,0 +1,23 @@
++import { render, screen } from '@testing-library/react'
++import { MeasurementPanel } from './MeasurementPanel'
++import type { MeasurementModule } from '../../shared/readiness'
++
++const bank: MeasurementModule = {
++  key: 'bank', name: 'Bank Statement Analyzer', sub: 'Measurement.', phase: 'measurement',
++  percent: 77, status: 'on_track', statusLabel: 'On track', note: 'Weighted.',
++  targetDate: '~6 July', dateConfidence: 'projected',
++  capabilitiesAtStandard: { count: 4, of: 6 },
++  composite: { value: 77, denominator: 97, costExcluded: true },
++  gapNote: '23 points from 100.',
++  metrics: [
++    { capability: 'Output the system trusts', weight: 20, current: 'Not emitted', target: '70%', status: 'blocked', statusLabel: 'Blocked' },
++  ],
++  buckets: { achieved: [], holding: [], mustComplete: [] },
++}
++
++test('renders composite, capability count, and the metrics table', () => {
++  render(<MeasurementPanel module={bank} />)
++  expect(screen.getByText('77')).toBeInTheDocument()
++  expect(screen.getByText('4')).toBeInTheDocument()
++  expect(screen.getByText('Not emitted')).toBeInTheDocument()
++})
+diff --git a/src/components/MeasurementPanel.tsx b/src/components/MeasurementPanel.tsx
+new file mode 100644
+index 0000000..d3cf7a4
+--- /dev/null
++++ b/src/components/MeasurementPanel.tsx
+@@ -0,0 +1,46 @@
++import type { MeasurementModule } from '../../shared/readiness'
++import { ProgressBar } from './ProgressBar'
++import { BucketColumn } from './BucketColumn'
++import { MetricsTable } from './MetricsTable'
++
++export function MeasurementPanel({ module: m }: { module: MeasurementModule }) {
++  return (
++    <div className="panel active" role="tabpanel">
++      <div className="modband">
++        <div>
++          <div className="mtitle">{m.name}</div>
++          <div className="msub">{m.sub}</div>
++        </div>
++        <div className="release">
++          Target
++          <b className="est">{m.targetDate}</b>
++        </div>
++      </div>
++      <div className="row3">
++        <div className="card">
++          <div className="label">Production readiness</div>
++          <div>
++            <span className="bignum">{m.percent}<span className="unit">%</span></span>
++            <span className="pill amber">{m.statusLabel}</span>
++          </div>
++          <ProgressBar percent={m.percent} />
++          <div className="note">{m.note}</div>
++        </div>
++        <div className="card">
++          <div className="label">Capabilities at standard</div>
++          <div className="bignum">{m.capabilitiesAtStandard.count}<span className="unit"> of {m.capabilitiesAtStandard.of}</span></div>
++        </div>
++      </div>
++      <div className="note">{m.gapNote}</div>
++      <div className="buckets">
++        <BucketColumn tone="green" title="Achieved" items={m.buckets.achieved} />
++        <BucketColumn tone="amber" title="Holding" items={m.buckets.holding} />
++        <BucketColumn tone="red" title="Must Complete" items={m.buckets.mustComplete} />
++      </div>
++      <details className="detail" open>
++        <summary>By the numbers</summary>
++        <MetricsTable metrics={m.metrics} />
++      </details>
++    </div>
++  )
++}
+diff --git a/src/components/MetricsTable.test.tsx b/src/components/MetricsTable.test.tsx
+new file mode 100644
+index 0000000..debda69
+--- /dev/null
++++ b/src/components/MetricsTable.test.tsx
+@@ -0,0 +1,16 @@
++import { render, screen } from '@testing-library/react'
++import { MetricsTable } from './MetricsTable'
++
++test('renders rows including sentinel current values', () => {
++  render(
++    <MetricsTable
++      metrics={[
++        { capability: 'Reads statements correctly', weight: 30, current: '93.8%', target: '95%', status: 'at_target', statusLabel: 'At target' },
++        { capability: 'Output the system trusts', weight: 20, current: 'Not emitted', target: '70%', status: 'blocked', statusLabel: 'Blocked' },
++      ]}
++    />,
++  )
++  expect(screen.getByText('Reads statements correctly')).toBeInTheDocument()
++  expect(screen.getByText('Not emitted')).toBeInTheDocument()
++  expect(screen.getByText('Blocked')).toBeInTheDocument()
++})
+diff --git a/src/components/MetricsTable.tsx b/src/components/MetricsTable.tsx
+new file mode 100644
+index 0000000..2b7b4d5
+--- /dev/null
++++ b/src/components/MetricsTable.tsx
+@@ -0,0 +1,41 @@
++import type { Metric } from '../../shared/readiness'
++import { InfoTooltip } from './InfoTooltip'
++
++const STATUS_CLASS: Record<Metric['status'], string> = {
++  at_target: 'ok',
++  near: 'near',
++  blocked: 'blk',
++  no_target: 'none',
++}
++
++export function MetricsTable({ metrics }: { metrics: Metric[] }) {
++  return (
++    <table>
++      <thead>
++        <tr>
++          <th>Capability</th>
++          <th>Weight</th>
++          <th>
++            Current
++            <InfoTooltip flipLeft>
++              Where the metric sits today. "Not emitted" means the analyzer does not yet produce this output. "Measured / TBD" means data flows but no target exists to score against.
++            </InfoTooltip>
++          </th>
++          <th>Target</th>
++          <th>Status</th>
++        </tr>
++      </thead>
++      <tbody>
++        {metrics.map((m) => (
++          <tr key={m.capability}>
++            <td>{m.capability}</td>
++            <td>{m.weight}%</td>
++            <td>{m.current}</td>
++            <td>{m.target}</td>
++            <td><span className={`st ${STATUS_CLASS[m.status]}`}>{m.statusLabel}</span></td>
++          </tr>
++        ))}
++      </tbody>
++    </table>
++  )
++}
+diff --git a/src/components/ProgressBar.tsx b/src/components/ProgressBar.tsx
+new file mode 100644
+index 0000000..2cf2092
+--- /dev/null
++++ b/src/components/ProgressBar.tsx
+@@ -0,0 +1,21 @@
++import { useEffect, useState } from 'react'
++
++export function ProgressBar({ percent, color }: { percent: number; color?: string }) {
++  const [width, setWidth] = useState(0)
++  useEffect(() => {
++    const id = requestAnimationFrame(() => setWidth(percent))
++    return () => cancelAnimationFrame(id)
++  }, [percent])
++  return (
++    <div className="track">
++      <div
++        className="fill"
++        role="progressbar"
++        aria-valuenow={percent}
++        aria-valuemin={0}
++        aria-valuemax={100}
++        style={{ width: `${width}%`, ...(color ? { background: color } : {}) }}
++      />
++    </div>
++  )
++}
+diff --git a/src/components/Tabs.test.tsx b/src/components/Tabs.test.tsx
+new file mode 100644
+index 0000000..bd1494c
+--- /dev/null
++++ b/src/components/Tabs.test.tsx
+@@ -0,0 +1,18 @@
++import { render, screen } from '@testing-library/react'
++import userEvent from '@testing-library/user-event'
++import { vi } from 'vitest'
++import { Tabs } from './Tabs'
++import type { Module } from '../../shared/readiness'
++
++const modules = [
++  { key: 'pe', name: 'Pricing & Eligibility', percent: 71 },
++  { key: 'bank', name: 'Bank Statement Analyzer', percent: 77 },
++] as unknown as Module[]
++
++test('renders one tab per module and reports clicks', async () => {
++  const onSelect = vi.fn()
++  render(<Tabs modules={modules} activeKey="pe" onSelect={onSelect} />)
++  expect(screen.getAllByRole('tab')).toHaveLength(2)
++  await userEvent.click(screen.getByRole('tab', { name: /Bank Statement Analyzer/ }))
++  expect(onSelect).toHaveBeenCalledWith('bank')
++})
+diff --git a/src/components/Tabs.tsx b/src/components/Tabs.tsx
+new file mode 100644
+index 0000000..333b09a
+--- /dev/null
++++ b/src/components/Tabs.tsx
+@@ -0,0 +1,24 @@
++import type { Module } from '../../shared/readiness'
++
++export function Tabs({ modules, activeKey, onSelect }: {
++  modules: Module[]
++  activeKey: string
++  onSelect: (key: string) => void
++}) {
++  return (
++    <div className="tabs" role="tablist">
++      {modules.map((m) => (
++        <button
++          key={m.key}
++          className={`tab${m.key === activeKey ? ' active' : ''}`}
++          role="tab"
++          aria-selected={m.key === activeKey}
++          onClick={() => onSelect(m.key)}
++        >
++          {m.name}
++          <span className="mini">{m.percent}%</span>
++        </button>
++      ))}
++    </div>
++  )
++}
+diff --git a/src/components/leaf.test.tsx b/src/components/leaf.test.tsx
+new file mode 100644
+index 0000000..150ea26
+--- /dev/null
++++ b/src/components/leaf.test.tsx
+@@ -0,0 +1,19 @@
++import { render, screen } from '@testing-library/react'
++import { AssumedBadge } from './AssumedBadge'
++import { ProgressBar } from './ProgressBar'
++import { InfoTooltip } from './InfoTooltip'
++
++test('AssumedBadge renders its text', () => {
++  render(<AssumedBadge text="Architecture phase" />)
++  expect(screen.getByText('Architecture phase')).toBeInTheDocument()
++})
++
++test('ProgressBar exposes the percent via aria', () => {
++  render(<ProgressBar percent={71} />)
++  expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '71')
++})
++
++test('InfoTooltip renders its tip content', () => {
++  render(<InfoTooltip>Helpful note</InfoTooltip>)
++  expect(screen.getByText('Helpful note')).toBeInTheDocument()
++})
+diff --git a/src/main.tsx b/src/main.tsx
+new file mode 100644
+index 0000000..840e41f
+--- /dev/null
++++ b/src/main.tsx
+@@ -0,0 +1,10 @@
++import './styles/app.css'
++import { StrictMode } from 'react'
++import { createRoot } from 'react-dom/client'
++import App from './App'
++
++createRoot(document.getElementById('root')!).render(
++  <StrictMode>
++    <App />
++  </StrictMode>,
++)
+diff --git a/src/styles/app.css b/src/styles/app.css
+new file mode 100644
+index 0000000..3de6498
+--- /dev/null
++++ b/src/styles/app.css
+@@ -0,0 +1,120 @@
++  * { margin: 0; padding: 0; box-sizing: border-box; }
++  body {
++    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
++    background: #EEF2F7; color: #0B1F3A; line-height: 1.5; padding: 28px 24px;
++    -webkit-font-smoothing: antialiased;
++  }
++  .wrap { max-width: 1040px; margin: 0 auto; }
++
++  /* Masthead */
++  .masthead {
++    background: #0B1F3A; border-radius: 16px; padding: 22px 30px; margin-bottom: 18px;
++    display: flex; align-items: center; justify-content: space-between;
++  }
++  .masthead .brand { font-size: 20px; font-weight: 600; color: #fff; }
++  .masthead .brand span { display: block; font-size: 13px; font-weight: 400; color: #9DB4D0; margin-top: 3px; }
++  .masthead .asof { font-size: 12px; color: #9DB4D0; text-align: right; }
++  .masthead .asof b { color: #6FB6FF; display: block; font-size: 13px; font-weight: 600; }
++
++  /* Tabs */
++  .tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 18px; }
++  .tab {
++    font-size: 13px; font-weight: 500; color: #41566F; background: #fff;
++    border: 1px solid #E3EAF2; border-radius: 10px; padding: 9px 15px; cursor: pointer;
++    transition: all .15s; white-space: nowrap;
++  }
++  .tab:hover { border-color: #B9CBE2; }
++  .tab.active { background: #1E6FE0; color: #fff; border-color: #1E6FE0; }
++  .tab .mini { display: inline-block; margin-left: 7px; font-size: 11px; font-weight: 700; opacity: .85; }
++
++  /* Panels */
++  .panel { display: none; }
++  .panel.active { display: block; animation: fade .25s ease; }
++  @keyframes fade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
++
++  /* Module header band */
++  .modband {
++    background: #fff; border: 1px solid #E3EAF2; border-radius: 14px;
++    padding: 18px 24px; margin-bottom: 14px; display: flex; align-items: center;
++    justify-content: space-between; border-left: 5px solid #1E6FE0;
++  }
++  .modband .mtitle { font-size: 18px; font-weight: 600; color: #0B1F3A; }
++  .modband .msub { font-size: 13px; color: #5A6B82; margin-top: 2px; }
++  .modband .release { text-align: right; font-size: 12px; color: #5A6B82; }
++  .modband .release b { display: block; font-size: 15px; color: #0B1F3A; font-weight: 600; margin-top: 2px; }
++  .modband .release .est { color: #1E6FE0; }
++
++  /* Top number row */
++  .row3 { display: grid; grid-template-columns: 1.3fr 1fr 1fr; gap: 14px; margin-bottom: 14px; }
++  .card { background: #fff; border: 1px solid #E3EAF2; border-radius: 14px; padding: 20px 24px; }
++  .card .label { font-size: 12px; color: #5A6B82; margin-bottom: 10px; text-transform: uppercase; letter-spacing: .04em; }
++  .bignum { font-size: 44px; font-weight: 600; line-height: 1; color: #0B1F3A; }
++  .bignum .unit { font-size: 18px; color: #5A6B82; font-weight: 500; margin-left: 4px; }
++  .pill { font-size: 12px; font-weight: 600; padding: 4px 12px; border-radius: 999px; margin-left: 10px; vertical-align: 7px; }
++  .pill.green { background: #E4F5EC; color: #1E6E4A; }
++  .pill.amber { background: #FFF3DD; color: #8A5A00; }
++  .pill.blue  { background: #E7F0FC; color: #1857B0; }
++  .pill.grey  { background: #EEF1F5; color: #5A6B82; }
++  .track { margin-top: 16px; height: 9px; border-radius: 999px; background: #EDF1F6; overflow: hidden; }
++  .fill { height: 100%; border-radius: 999px; background: #1E6FE0; width: 0; transition: width 1s cubic-bezier(.2,.7,.3,1); }
++  .note { font-size: 12.5px; color: #5A6B82; margin-top: 12px; line-height: 1.55; }
++
++  /* Buckets */
++  .buckets { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 14px; }
++  .bucket { background: #fff; border: 1px solid #E3EAF2; border-radius: 14px; padding: 18px 20px; border-top: 4px solid #ccc; }
++  .bucket.green { border-top-color: #2E9E6B; }
++  .bucket.amber { border-top-color: #F0A93B; }
++  .bucket.grey  { border-top-color: #9AAEC6; }
++  .bucket.red   { border-top-color: #D84C4C; }
++  .bhead { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
++  .bhead .ico { width: 16px; height: 16px; border-radius: 50%; }
++  .green .ico { background: #2E9E6B; } .amber .ico { background: #F0A93B; }
++  .grey .ico { background: #9AAEC6; } .red .ico { background: #D84C4C; }
++  .bhead .ttl { font-size: 12.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; }
++  .green .ttl { color: #1E6E4A; } .amber .ttl { color: #8A5A00; }
++  .grey .ttl { color: #56657C; } .red .ttl { color: #A32D2D; }
++  .bcount { font-size: 12px; color: #93A3B8; margin-bottom: 14px; font-weight: 600; }
++  .item { font-size: 12.5px; color: #2A3A4F; margin-bottom: 11px; line-height: 1.5; }
++  .item:last-child { margin-bottom: 0; }
++  .item b { color: #0B1F3A; font-weight: 600; }
++
++  /* Capability tooltips (bank tab) */
++  .info { display: inline-flex; align-items: center; justify-content: center; width: 15px; height: 15px;
++    border-radius: 50%; background: #D9E2EE; color: #3F5874; font-size: 10px; font-weight: 700;
++    font-style: normal; cursor: help; margin-left: 6px; vertical-align: middle; position: relative; }
++  .info:hover { background: #1E6FE0; color: #fff; }
++  .info .tip { visibility: hidden; opacity: 0; transition: opacity .15s; position: absolute; z-index: 30;
++    bottom: 150%; left: 50%; transform: translateX(-50%); width: 290px; background: #0B1F3A; color: #E8EEF6;
++    font-size: 12px; font-weight: 400; line-height: 1.5; font-style: normal; text-align: left;
++    padding: 12px 14px; border-radius: 10px; box-shadow: 0 8px 24px rgba(11,31,58,.28); }
++  .info .tip::after { content: ""; position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
++    border: 6px solid transparent; border-top-color: #0B1F3A; }
++  .info .tip b { color: #fff; }
++  .info:hover .tip, .info:focus .tip { visibility: visible; opacity: 1; }
++  td .info.tip-left .tip, .info.tip-left .tip { left: auto; right: -8px; transform: none; }
++  .info.tip-left .tip::after { left: auto; right: 12px; transform: none; }
++  th .info { background: rgba(255,255,255,.22); color: #fff; }
++  th .info:hover { background: #fff; color: #0B1F3A; }
++
++  /* Detail table */
++  .detail { margin-top: 14px; }
++  .detail summary { cursor: pointer; font-size: 13px; color: #1E6FE0; font-weight: 600; padding: 11px 18px;
++    background: #fff; border: 1px solid #E3EAF2; border-radius: 12px; list-style: none; user-select: none; }
++  .detail summary::-webkit-details-marker { display: none; }
++  .detail summary::after { content: " ▾"; color: #5A6B82; }
++  .detail[open] summary::after { content: " ▴"; }
++  table { width: 100%; border-collapse: collapse; margin-top: 12px; background: #fff;
++    border: 1px solid #E3EAF2; border-radius: 12px; overflow: hidden; font-size: 12.5px; }
++  th { background: #0B1F3A; color: #fff; text-align: left; padding: 10px 13px; font-weight: 600; }
++  td { padding: 9px 13px; border-top: 1px solid #EDF1F6; color: #2A3A4F; }
++  td:first-child { font-weight: 700; color: #0B1F3A; }
++  td .st { font-weight: 600; }
++  .st.ok { color: #1E6E4A; } .st.near { color: #8A5A00; } .st.blk { color: #A32D2D; }
++  .st.none { color: #5A6B82; } .st.prog { color: #1857B0; }
++  .wt { display: inline-block; font-size: 11px; font-weight: 700; color: #3F5874; background: #EEF3F9;
++    border-radius: 6px; padding: 1px 7px; margin-left: 6px; }
++
++  .assumed { display: inline-block; font-size: 10.5px; font-weight: 700; color: #8A5A00; background: #FFF3DD;
++    border-radius: 5px; padding: 2px 8px; margin-left: 8px; vertical-align: 2px; text-transform: uppercase; letter-spacing: .03em; }
++
++  .foot { text-align: center; font-size: 11px; color: #8FA0B5; margin-top: 22px; }
+diff --git a/src/styles/styles.test.ts b/src/styles/styles.test.ts
+new file mode 100644
+index 0000000..de0308c
+--- /dev/null
++++ b/src/styles/styles.test.ts
+@@ -0,0 +1,13 @@
++import { readFileSync } from 'node:fs'
++import { fileURLToPath } from 'node:url'
++import { dirname, join } from 'node:path'
++import { test, expect } from 'vitest'
++
++const __dirname = dirname(fileURLToPath(import.meta.url))
++
++test('app.css contains the core PoC classes', () => {
++  const css = readFileSync(join(__dirname, './app.css'), 'utf8')
++  for (const cls of ['.masthead', '.tabs', '.panel', '.modband', '.bucket', '.bignum', '.fill']) {
++    expect(css).toContain(cls)
++  }
++})
+diff --git a/src/test/setup.ts b/src/test/setup.ts
+new file mode 100644
+index 0000000..c44951a
+--- /dev/null
++++ b/src/test/setup.ts
+@@ -0,0 +1 @@
++import '@testing-library/jest-dom'
+diff --git a/src/vite-env.d.ts b/src/vite-env.d.ts
+new file mode 100644
+index 0000000..11f02fe
+--- /dev/null
++++ b/src/vite-env.d.ts
+@@ -0,0 +1 @@
++/// <reference types="vite/client" />
+diff --git a/tsconfig.json b/tsconfig.json
+new file mode 100644
+index 0000000..c958952
+--- /dev/null
++++ b/tsconfig.json
+@@ -0,0 +1,23 @@
++{
++  "compilerOptions": {
++    "target": "ES2022",
++    "useDefineForClassFields": true,
++    "lib": ["ES2022", "DOM", "DOM.Iterable"],
++    "module": "ESNext",
++    "skipLibCheck": true,
++    "moduleResolution": "bundler",
++    "allowImportingTsExtensions": false,
++    "resolveJsonModule": true,
++    "isolatedModules": true,
++    "moduleDetection": "force",
++    "noEmit": true,
++    "jsx": "react-jsx",
++    "strict": true,
++    "noUnusedLocals": true,
++    "noUnusedParameters": true,
++    "noFallthroughCasesInSwitch": true,
++    "types": ["vitest/globals", "@testing-library/jest-dom"]
++  },
++  "include": ["src", "shared", "api"],
++  "references": [{ "path": "./tsconfig.node.json" }]
++}
+diff --git a/tsconfig.node.json b/tsconfig.node.json
+new file mode 100644
+index 0000000..a5ad36b
+--- /dev/null
++++ b/tsconfig.node.json
+@@ -0,0 +1,16 @@
++{
++  "compilerOptions": {
++    "composite": true,
++    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.node.tsbuildinfo",
++    "outDir": "./node_modules/.tmp/node",
++    "emitDeclarationOnly": true,
++    "target": "ES2022",
++    "lib": ["ES2023"],
++    "module": "ESNext",
++    "skipLibCheck": true,
++    "moduleResolution": "bundler",
++    "allowSyntheticDefaultImports": true,
++    "strict": true
++  },
++  "include": ["vite.config.ts"]
++}
+diff --git a/vercel.json b/vercel.json
+new file mode 100644
+index 0000000..c46c343
+--- /dev/null
++++ b/vercel.json
+@@ -0,0 +1,6 @@
++{
++  "rewrites": [{ "source": "/((?!api/).*)", "destination": "/index.html" }],
++  "headers": [
++    { "source": "/(.*)", "headers": [{ "key": "X-Robots-Tag", "value": "noindex" }] }
++  ]
++}
+diff --git a/vite.config.ts b/vite.config.ts
+new file mode 100644
+index 0000000..63b484b
+--- /dev/null
++++ b/vite.config.ts
+@@ -0,0 +1,12 @@
++/// <reference types="vitest/config" />
++import { defineConfig } from 'vite'
++import react from '@vitejs/plugin-react'
++
++export default defineConfig({
++  plugins: [react()],
++  test: {
++    globals: true,
++    environment: 'jsdom',
++    setupFiles: './src/test/setup.ts',
++  },
++})

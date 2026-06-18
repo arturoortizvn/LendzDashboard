@@ -249,6 +249,7 @@ const id: DeliveryModule = {
   targetDate: '1 July',
   dateConfidence: 'committed',
   assumed: true,
+  assumedLabel: 'Scaffolding done',
   accentColor: '#E0913B',
   // delivered bcount is "inherited foundation" (1 item); inProgress card shows 1; remaining card shows "—" (2 items listed)
   counts: { delivered: 1, inProgress: 1, remaining: 2 },
@@ -278,6 +279,7 @@ const tax: DeliveryModule = {
   targetDate: '3 July',
   dateConfidence: 'committed',
   assumed: true,
+  assumedLabel: 'Scaffolding done',
   accentColor: '#5A8FB5',
   // delivered bcount "inherited foundation" (1 item); inProgress card "—" (1 item); remaining card "—" (3 items)
   counts: { delivered: 1, inProgress: 1, remaining: 3 },

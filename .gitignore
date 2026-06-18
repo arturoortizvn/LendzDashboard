@@ -9,6 +9,9 @@ build/
 # Vite
 .vite/
 
+# TypeScript incremental build info
+*.tsbuildinfo
+
 # Environment / secrets
 .env
 .env.*

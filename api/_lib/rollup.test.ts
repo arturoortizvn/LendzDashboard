@@ -42,6 +42,15 @@ test('bank-labeled stories are ignored by the delivery rollup', () => {
     { name: 'U-02-01 · Bank Statement Analyzer', status: 'Done', module: 'Bank Analyzer' },
   ]
   const byKey = assembleLivePayload(stories, 'now')
-  // bank remains the untouched fixture module
   expect(byKey.modules.find((m) => m.key === 'bank')).toBe(MODULES_BY_KEY['bank'])
+})
+
+test('zero-stories assumed: module without base assumedLabel gets fallback label, module with base label preserves it', () => {
+  const pe = buildDeliveryModule('pe', [])
+  expect(pe.assumed).toBe(true)
+  expect(pe.assumedLabel).toBe('Awaiting board data')
+
+  const tax = buildDeliveryModule('tax', [])
+  expect(tax.assumed).toBe(true)
+  expect(tax.assumedLabel).toBe('Scaffolding done')
 })

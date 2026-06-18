@@ -13,7 +13,7 @@ import {
 export function buildDeliveryModule(key: string, stories: RawStory[]): DeliveryModule {
   const base = MODULES_BY_KEY[key] as DeliveryModule
   if (stories.length === 0) {
-    return { ...base, assumed: true }
+    return { ...base, assumed: true, assumedLabel: base.assumedLabel ?? 'Awaiting board data' }
   }
 
   const buckets = {

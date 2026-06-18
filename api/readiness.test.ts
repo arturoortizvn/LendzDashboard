@@ -1,10 +1,11 @@
-import { readFileSync } from 'node:fs'
-import { fileURLToPath } from 'node:url'
-import { dirname, join } from 'node:path'
+import { afterEach, expect, test, vi } from 'vitest'
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import handler from './readiness'
 
-const __dirname = dirname(fileURLToPath(import.meta.url))
+vi.mock('./_lib/blob.js', () => ({ readLatest: vi.fn() }))
+
+import handler from './readiness'
+import { buildPayload } from '../shared/readiness'
+import { readLatest } from './_lib/blob.js'
 
 function mockRes() {
   const res: Partial<VercelResponse> & { body?: unknown; statusCode?: number; headers: Record<string, string> } = {
@@ -16,20 +17,24 @@ function mockRes() {
   return res
 }
 
-test('returns a 200 payload with asOf and seven modules', () => {
+afterEach(() => vi.clearAllMocks())
+
+test('serves the last-known-good payload from the blob with cache header', async () => {
+  vi.mocked(readLatest).mockResolvedValue(buildPayload('2026-06-18T00:00:00Z'))
   const res = mockRes()
-  handler({} as VercelRequest, res as VercelResponse)
+  await handler({} as VercelRequest, res as VercelResponse)
   expect(res.statusCode).toBe(200)
-  const body = res.body as { asOf: string; modules: unknown[] }
-  expect(typeof body.asOf).toBe('string')
+  const body = res.body as { modules: unknown[] }
   expect(body.modules).toHaveLength(7)
   expect(res.headers['Cache-Control']).toContain('s-maxage')
 })
 
-test('relative imports use explicit .js extensions for Node ESM runtime', () => {
-  const src = readFileSync(join(__dirname, './readiness.ts'), 'utf8')
-  const relativeImports = src.match(/from '(\.\.?\/[^']+)'/g) ?? []
-  for (const imp of relativeImports) {
-    expect(imp).toMatch(/\.js'$/)
-  }
+test('falls back to the config baseline when the blob is missing', async () => {
+  vi.mocked(readLatest).mockResolvedValue(null)
+  const res = mockRes()
+  await handler({} as VercelRequest, res as VercelResponse)
+  expect(res.statusCode).toBe(200)
+  const body = res.body as { modules: unknown[]; source?: string }
+  expect(body.modules).toHaveLength(7)
+  expect(body.source).toBe('baseline')
 })

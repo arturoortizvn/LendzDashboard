@@ -23,12 +23,12 @@ export function bucketForStatus(status: string | null | undefined): Bucket {
 }
 
 export const MODULE_LABELS: Record<string, ModuleKey> = {
-  'Pricing & Eligibility': 'pe',
+  'Pricing and Eligibility': 'pe',
   'Verified Truth': 'vt',
   Underwriting: 'uw',
-  Lexi: 'lexi',
+  'Lexi Intelligence': 'lexi',
   'ID Analyzer': 'id',
-  'Tax Docs': 'tax',
+  'Tax Analyzer': 'tax',
   'Bank Analyzer': 'bank',
 }
 
@@ -64,10 +64,10 @@ export function getMondayToken(): string {
   return t
 }
 
+export const MODULE_COLUMN_ID = 'color_mm4e3r3v'
+
 export function getModuleColumnId(): string {
-  const c = process.env.MONDAY_MODULE_COLUMN_ID
-  if (!c) throw new Error('MONDAY_MODULE_COLUMN_ID is not set')
-  return c
+  return process.env.MONDAY_MODULE_COLUMN_ID || MODULE_COLUMN_ID
 }
 
 export function getBoardId(): number {

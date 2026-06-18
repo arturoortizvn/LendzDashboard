@@ -1,6 +1,7 @@
 import { expect, test } from 'vitest'
 import { assembleLivePayload, buildDeliveryModule } from './rollup'
 import { MODULES_BY_KEY } from '../../shared/readiness'
+import type { DeliveryModule } from '../../shared/readiness'
 import type { RawStory } from './monday'
 
 test('rolls up counts, percent, status, note, and cleaned titles', () => {
@@ -53,4 +54,14 @@ test('zero-stories assumed: module without base assumedLabel gets fallback label
   const tax = buildDeliveryModule('tax', [])
   expect(tax.assumed).toBe(true)
   expect(tax.assumedLabel).toBe('Scaffolding done')
+})
+
+test('assembleLivePayload routes a real Module label to its delivery module', () => {
+  const stories: RawStory[] = [
+    { name: 'F-01-06 · Eligibility evaluation', status: 'Done', module: 'Pricing and Eligibility' },
+  ]
+  const p = assembleLivePayload(stories, '2026-06-18T00:00:00Z')
+  const pe = p.modules.find((m) => m.key === 'pe') as DeliveryModule | undefined
+  expect(pe?.assumed).toBe(false)
+  expect(pe?.counts.delivered).toBe(1)
 })

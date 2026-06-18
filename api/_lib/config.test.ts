@@ -20,8 +20,12 @@ test('maps Monday statuses to buckets, unknown/blank → remaining', () => {
 })
 
 test('maps Module column labels to keys', () => {
-  expect(moduleKeyForLabel('Pricing & Eligibility')).toBe('pe')
+  expect(moduleKeyForLabel('Pricing and Eligibility')).toBe('pe')
+  expect(moduleKeyForLabel('Lexi Intelligence')).toBe('lexi')
+  expect(moduleKeyForLabel('Tax Analyzer')).toBe('tax')
+  expect(moduleKeyForLabel('Bank Analyzer')).toBe('bank')
   expect(moduleKeyForLabel('ID Analyzer')).toBe('id')
+  expect(moduleKeyForLabel('Platform')).toBeNull()
   expect(moduleKeyForLabel(null)).toBeNull()
   expect(moduleKeyForLabel('Not a module')).toBeNull()
 })

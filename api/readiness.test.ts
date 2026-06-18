@@ -20,13 +20,17 @@ function mockRes() {
 afterEach(() => vi.clearAllMocks())
 
 test('serves the last-known-good payload from the blob with cache header', async () => {
-  vi.mocked(readLatest).mockResolvedValue(buildPayload('2026-06-18T00:00:00Z'))
+  const live = { ...buildPayload('2026-06-18T00:00:00Z'), source: 'live' as const, builtAt: '2026-06-18T00:00:00Z' }
+  vi.mocked(readLatest).mockResolvedValue(live)
   const res = mockRes()
   await handler({} as VercelRequest, res as VercelResponse)
   expect(res.statusCode).toBe(200)
-  const body = res.body as { modules: unknown[] }
+  const body = res.body as { modules: unknown[]; source: string; builtAt: string }
+  expect(body.source).toBe('live')
+  expect(body.builtAt).toBe('2026-06-18T00:00:00Z')
   expect(body.modules).toHaveLength(7)
   expect(res.headers['Cache-Control']).toContain('s-maxage')
+  expect(readLatest).toHaveBeenCalledTimes(1)
 })
 
 test('falls back to the config baseline when the blob is missing', async () => {
@@ -37,4 +41,5 @@ test('falls back to the config baseline when the blob is missing', async () => {
   const body = res.body as { modules: unknown[]; source?: string }
   expect(body.modules).toHaveLength(7)
   expect(body.source).toBe('baseline')
+  expect(readLatest).toHaveBeenCalledTimes(1)
 })

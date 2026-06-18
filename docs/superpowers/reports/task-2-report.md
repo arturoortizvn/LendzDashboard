@@ -77,6 +77,19 @@ Commit: `0a51247` "Port PoC stylesheet into the React app"
 - All required PoC classes verified to be present in the stylesheet
 - Stylesheet import placed first as specified to ensure global styles load before React components
 
+## Fix: remove duplicate .assumed/.wt rules
+
+**Finding**: The PoC block (lines 114–118) defined `.assumed` and `.wt` with correct border-radius values (5px and 6px respectively), but lines 122–123 appended duplicate rules with `border-radius:999px`. CSS last-declaration wins, silently overriding the PoC values and breaking the "ported verbatim" requirement.
+
+**Fix**: Removed the appended duplicate rules at the end of the file (lines 122–123). The original PoC definitions now stand alone.
+
+**Verification**:
+- Test command: `npm test -- styles`
+- Result: **PASS** (1 test passed)
+- Selector count: `.assumed` and `.wt` each appear exactly once in `app.css`
+  - `.wt`: line 114 (PoC original, `border-radius:6px`)
+  - `.assumed`: line 117 (PoC original, `border-radius:5px`, `text-transform:uppercase`)
+
 ## No concerns
 
 All requirements met, tests pass, stylesheet ready for component implementation tasks.

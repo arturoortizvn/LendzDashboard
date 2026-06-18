@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LendLogic — Delivery Readiness Console</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: #EEF2F7; color: #0B1F3A; line-height: 1.5; padding: 28px 24px;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1040px; margin: 0 auto; }
+
+  /* Masthead */
+  .masthead {
+    background: #0B1F3A; border-radius: 16px; padding: 22px 30px; margin-bottom: 18px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .masthead .brand { font-size: 20px; font-weight: 600; color: #fff; }
+  .masthead .brand span { display: block; font-size: 13px; font-weight: 400; color: #9DB4D0; margin-top: 3px; }
+  .masthead .asof { font-size: 12px; color: #9DB4D0; text-align: right; }
+  .masthead .asof b { color: #6FB6FF; display: block; font-size: 13px; font-weight: 600; }
+
+  /* Tabs */
+  .tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 18px; }
+  .tab {
+    font-size: 13px; font-weight: 500; color: #41566F; background: #fff;
+    border: 1px solid #E3EAF2; border-radius: 10px; padding: 9px 15px; cursor: pointer;
+    transition: all .15s; white-space: nowrap;
+  }
+  .tab:hover { border-color: #B9CBE2; }
+  .tab.active { background: #1E6FE0; color: #fff; border-color: #1E6FE0; }
+  .tab .mini { display: inline-block; margin-left: 7px; font-size: 11px; font-weight: 700; opacity: .85; }
+
+  /* Panels */
+  .panel { display: none; }
+  .panel.active { display: block; animation: fade .25s ease; }
+  @keyframes fade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+  /* Module header band */
+  .modband {
+    background: #fff; border: 1px solid #E3EAF2; border-radius: 14px;
+    padding: 18px 24px; margin-bottom: 14px; display: flex; align-items: center;
+    justify-content: space-between; border-left: 5px solid #1E6FE0;
+  }
+  .modband .mtitle { font-size: 18px; font-weight: 600; color: #0B1F3A; }
+  .modband .msub { font-size: 13px; color: #5A6B82; margin-top: 2px; }
+  .modband .release { text-align: right; font-size: 12px; color: #5A6B82; }
+  .modband .release b { display: block; font-size: 15px; color: #0B1F3A; font-weight: 600; margin-top: 2px; }
+  .modband .release .est { color: #1E6FE0; }
+
+  /* Top number row */
+  .row3 { display: grid; grid-template-columns: 1.3fr 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+  .card { background: #fff; border: 1px solid #E3EAF2; border-radius: 14px; padding: 20px 24px; }
+  .card .label { font-size: 12px; color: #5A6B82; margin-bottom: 10px; text-transform: uppercase; letter-spacing: .04em; }
+  .bignum { font-size: 44px; font-weight: 600; line-height: 1; color: #0B1F3A; }
+  .bignum .unit { font-size: 18px; color: #5A6B82; font-weight: 500; margin-left: 4px; }
+  .pill { font-size: 12px; font-weight: 600; padding: 4px 12px; border-radius: 999px; margin-left: 10px; vertical-align: 7px; }
+  .pill.green { background: #E4F5EC; color: #1E6E4A; }
+  .pill.amber { background: #FFF3DD; color: #8A5A00; }
+  .pill.blue  { background: #E7F0FC; color: #1857B0; }
+  .pill.grey  { background: #EEF1F5; color: #5A6B82; }
+  .track { margin-top: 16px; height: 9px; border-radius: 999px; background: #EDF1F6; overflow: hidden; }
+  .fill { height: 100%; border-radius: 999px; background: #1E6FE0; width: 0; transition: width 1s cubic-bezier(.2,.7,.3,1); }
+  .note { font-size: 12.5px; color: #5A6B82; margin-top: 12px; line-height: 1.55; }
+
+  /* Buckets */
+  .buckets { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 14px; }
+  .bucket { background: #fff; border: 1px solid #E3EAF2; border-radius: 14px; padding: 18px 20px; border-top: 4px solid #ccc; }
+  .bucket.green { border-top-color: #2E9E6B; }
+  .bucket.amber { border-top-color: #F0A93B; }
+  .bucket.grey  { border-top-color: #9AAEC6; }
+  .bucket.red   { border-top-color: #D84C4C; }
+  .bhead { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .bhead .ico { width: 16px; height: 16px; border-radius: 50%; }
+  .green .ico { background: #2E9E6B; } .amber .ico { background: #F0A93B; }
+  .grey .ico { background: #9AAEC6; } .red .ico { background: #D84C4C; }
+  .bhead .ttl { font-size: 12.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; }
+  .green .ttl { color: #1E6E4A; } .amber .ttl { color: #8A5A00; }
+  .grey .ttl { color: #56657C; } .red .ttl { color: #A32D2D; }
+  .bcount { font-size: 12px; color: #93A3B8; margin-bottom: 14px; font-weight: 600; }
+  .item { font-size: 12.5px; color: #2A3A4F; margin-bottom: 11px; line-height: 1.5; }
+  .item:last-child { margin-bottom: 0; }
+  .item b { color: #0B1F3A; font-weight: 600; }
+
+  /* Capability tooltips (bank tab) */
+  .info { display: inline-flex; align-items: center; justify-content: center; width: 15px; height: 15px;
+    border-radius: 50%; background: #D9E2EE; color: #3F5874; font-size: 10px; font-weight: 700;
+    font-style: normal; cursor: help; margin-left: 6px; vertical-align: middle; position: relative; }
+  .info:hover { background: #1E6FE0; color: #fff; }
+  .info .tip { visibility: hidden; opacity: 0; transition: opacity .15s; position: absolute; z-index: 30;
+    bottom: 150%; left: 50%; transform: translateX(-50%); width: 290px; background: #0B1F3A; color: #E8EEF6;
+    font-size: 12px; font-weight: 400; line-height: 1.5; font-style: normal; text-align: left;
+    padding: 12px 14px; border-radius: 10px; box-shadow: 0 8px 24px rgba(11,31,58,.28); }
+  .info .tip::after { content: ""; position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
+    border: 6px solid transparent; border-top-color: #0B1F3A; }
+  .info .tip b { color: #fff; }
+  .info:hover .tip, .info:focus .tip { visibility: visible; opacity: 1; }
+  td .info.tip-left .tip, .info.tip-left .tip { left: auto; right: -8px; transform: none; }
+  .info.tip-left .tip::after { left: auto; right: 12px; transform: none; }
+  th .info { background: rgba(255,255,255,.22); color: #fff; }
+  th .info:hover { background: #fff; color: #0B1F3A; }
+
+  /* Detail table */
+  .detail { margin-top: 14px; }
+  .detail summary { cursor: pointer; font-size: 13px; color: #1E6FE0; font-weight: 600; padding: 11px 18px;
+    background: #fff; border: 1px solid #E3EAF2; border-radius: 12px; list-style: none; user-select: none; }
+  .detail summary::-webkit-details-marker { display: none; }
+  .detail summary::after { content: " ▾"; color: #5A6B82; }
+  .detail[open] summary::after { content: " ▴"; }
+  table { width: 100%; border-collapse: collapse; margin-top: 12px; background: #fff;
+    border: 1px solid #E3EAF2; border-radius: 12px; overflow: hidden; font-size: 12.5px; }
+  th { background: #0B1F3A; color: #fff; text-align: left; padding: 10px 13px; font-weight: 600; }
+  td { padding: 9px 13px; border-top: 1px solid #EDF1F6; color: #2A3A4F; }
+  td:first-child { font-weight: 700; color: #0B1F3A; }
+  td .st { font-weight: 600; }
+  .st.ok { color: #1E6E4A; } .st.near { color: #8A5A00; } .st.blk { color: #A32D2D; }
+  .st.none { color: #5A6B82; } .st.prog { color: #1857B0; }
+  .wt { display: inline-block; font-size: 11px; font-weight: 700; color: #3F5874; background: #EEF3F9;
+    border-radius: 6px; padding: 1px 7px; margin-left: 6px; }
+
+  .assumed { display: inline-block; font-size: 10.5px; font-weight: 700; color: #8A5A00; background: #FFF3DD;
+    border-radius: 5px; padding: 2px 8px; margin-left: 8px; vertical-align: 2px; text-transform: uppercase; letter-spacing: .03em; }
+
+  .foot { text-align: center; font-size: 11px; color: #8FA0B5; margin-top: 22px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="masthead">
+    <div class="brand">Lendz Financial<span>LendLogic — Delivery Readiness Console</span></div>
+    <div class="asof">Snapshot<b>16 June 2026</b>Target window: mid-July</div>
+  </div>
+
+  <div class="tabs" id="tabs">
+    <button class="tab active" data-tab="pe">Pricing &amp; Eligibility<span class="mini">71%</span></button>
+    <button class="tab" data-tab="vt">Verified Truth<span class="mini">55%</span></button>
+    <button class="tab" data-tab="uw">Underwriting<span class="mini">69%</span></button>
+    <button class="tab" data-tab="lexi">Lexi Intelligence<span class="mini">55%</span></button>
+    <button class="tab" data-tab="bank">Bank Statement Analyzer<span class="mini">77%</span></button>
+    <button class="tab" data-tab="id">ID Analyzer<span class="mini">30%</span></button>
+    <button class="tab" data-tab="tax">Tax Docs Analyzer<span class="mini">30%</span></button>
+  </div>
+
+  <!-- ============ PRICING & ELIGIBILITY ============ -->
+  <div class="panel active" data-panel="pe">
+    <div class="modband" style="border-left-color:#1E6FE0;">
+      <div><div class="mtitle">Pricing and Eligibility Engine</div><div class="msub">Authoring and evaluation platform. Eleven sub-capabilities, delivered inside Phase One.</div></div>
+      <div class="release">Target MVP<b class="est">11 July</b>team committed</div>
+    </div>
+    <div class="row3">
+      <div class="card"><div class="label">Delivery progress</div><div><span class="bignum">71<span class="unit">%</span></span><span class="pill green">On track</span></div><div class="track"><div class="fill" data-w="71"></div></div><div class="note">53 of 75 tracked stories accepted. The most mature module on the program.</div></div>
+      <div class="card"><div class="label">In progress</div><div><span class="bignum">14</span></div><div class="note">Pricing accuracy refinements in code review and QA: final price, CLTV handling, scope-wins logic.</div></div>
+      <div class="card"><div class="label">Remaining</div><div><span class="bignum">8</span></div><div class="note">Loading Series 2 through Z rules and a small set of calculation fixes.</div></div>
+    </div>
+    <div class="buckets">
+      <div class="bucket green"><div class="bhead"><span class="ico"></span><span class="ttl">Delivered</span></div><div class="bcount">53 stories accepted</div>
+        <div class="item"><b>Product catalog and field library.</b> Loan attributes modeled, loanPASS-aligned.</div>
+        <div class="item"><b>Rules engine, end to end.</b> Backend, frontend, and CI/CD all live.</div>
+        <div class="item"><b>Eligibility against real prequal data.</b> Evaluates actual scenarios, explains each qualify or decline.</div>
+        <div class="item"><b>Add and modify products and rules.</b> Admin can author eligibility and pricing without code.</div>
+      </div>
+      <div class="bucket amber"><div class="bhead"><span class="ico"></span><span class="ttl">In progress</span></div><div class="bcount">14 stories in flight</div>
+        <div class="item"><b>Final price calculation.</b> Refining the full price build-up.</div>
+        <div class="item"><b>Pricing accuracy fixes.</b> CLTV bands, LPC, escrow waiver, scope-wins precedence.</div>
+        <div class="item"><b>Evaluation performance.</b> Faster price evaluation in review.</div>
+      </div>
+      <div class="bucket grey"><div class="bhead"><span class="ico"></span><span class="ttl">Remaining</span></div><div class="bcount">8 stories not started</div>
+        <div class="item"><b>Load Series 2 through Z rules.</b> Currently blocked, the main remaining lift.</div>
+        <div class="item"><b>Admin draft and publish workflow.</b> Separate admin edits from the live calculator.</div>
+        <div class="item"><b>Residual calculation fixes.</b> Field dependencies and edge cases.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ VERIFIED TRUTH ============ -->
+  <div class="panel" data-panel="vt">
+    <div class="modband" style="border-left-color:#7A5FD0;">
+      <div><div class="mtitle">Verified Truth <span class="assumed">Architecture phase</span></div><div class="msub">Governed, evidence-backed loan state. Currently defining the data model and integration contract.</div></div>
+      <div class="release">Target MVP<b class="est">6 July</b>quick lift, team committed</div>
+    </div>
+    <div class="row3">
+      <div class="card"><div class="label">Delivery progress</div><div><span class="bignum">55<span class="unit">%</span></span><span class="pill blue">In design</span></div><div class="track"><div class="fill" data-w="55" style="background:#7A5FD0;"></div></div><div class="note">Data model and integration contract substantially in place. The governed lifecycle is the remaining build. <span style="color:#8A5A00;">Figures assumed.</span></div></div>
+      <div class="card"><div class="label">In progress</div><div><span class="bignum">1</span></div><div class="note">Finalizing the provenance and versioning model.</div></div>
+      <div class="card"><div class="label">Remaining</div><div><span class="bignum">4</span></div><div class="note">The propose, approve, publish, recalc, and version-history lifecycle.</div></div>
+    </div>
+    <div class="buckets">
+      <div class="bucket green"><div class="bhead"><span class="ico"></span><span class="ttl">Delivered</span></div><div class="bcount">Foundation in place</div>
+        <div class="item"><b>Integration-contract principle.</b> Verified Truth established as the contract between modules, not point-to-point calls.</div>
+        <div class="item"><b>Downstream reaction model.</b> How a truth change drives pricing, conditions, and underwriting is defined.</div>
+        <div class="item"><b>Truth record data model.</b> Versioned scenario state per loan, designed and locked.</div>
+      </div>
+      <div class="bucket amber"><div class="bhead"><span class="ico"></span><span class="ttl">In progress</span></div><div class="bcount">Active design</div>
+        <div class="item"><b>Provenance and versioning.</b> Each value linked to the evidence version behind it. Being finalized.</div>
+      </div>
+      <div class="bucket grey"><div class="bhead"><span class="ico"></span><span class="ttl">Remaining</span></div><div class="bcount">Governed lifecycle</div>
+        <div class="item"><b>Propose, approve, publish.</b> The governance workflow for every truth change.</div>
+        <div class="item"><b>Auto-recalculate on publish.</b> Conditions, readiness, and pricing react automatically.</div>
+        <div class="item"><b>Version history view.</b> Reconstruct the decision trail at any point.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ UNDERWRITING ============ -->
+  <div class="panel" data-panel="uw">
+    <div class="modband" style="border-left-color:#1E8E7E;">
+      <div><div class="mtitle">Underwriting</div><div class="msub">Analyzer framework and verification center. The backbone analyzers run against evidence.</div></div>
+      <div class="release">Target MVP<b class="est">mid-August</b>team committed</div>
+    </div>
+    <div class="row3">
+      <div class="card"><div class="label">Delivery progress</div><div><span class="bignum">69<span class="unit">%</span></span><span class="pill green">On track</span></div><div class="track"><div class="fill" data-w="69" style="background:#1E8E7E;"></div></div><div class="note">9 of 13 framework stories accepted. Core analyzer plumbing is live.</div></div>
+      <div class="card"><div class="label">In progress</div><div><span class="bignum">0</span></div><div class="note">No framework stories mid-flight. Effort is on the analyzers themselves and the verification center next.</div></div>
+      <div class="card"><div class="label">Remaining</div><div><span class="bignum">4</span></div><div class="note">Verification center views and the truth-proposal handoff.</div></div>
+    </div>
+    <div class="buckets">
+      <div class="bucket green"><div class="bhead"><span class="ico"></span><span class="ttl">Delivered</span></div><div class="bcount">9 stories accepted</div>
+        <div class="item"><b>Analyzer framework.</b> Structured findings, manual trigger, full run history.</div>
+        <div class="item"><b>Auto re-run on new evidence.</b> Replacement evidence re-triggers the right analyzers.</div>
+        <div class="item"><b>Analyzer service and workbench UI.</b> Built and operational.</div>
+      </div>
+      <div class="bucket amber"><div class="bhead"><span class="ico"></span><span class="ttl">In progress</span></div><div class="bcount">analyzer build ongoing</div>
+        <div class="item"><b>Individual analyzers.</b> Bank and ID tracked on their own tabs.</div>
+      </div>
+      <div class="bucket grey"><div class="bhead"><span class="ico"></span><span class="ttl">Remaining</span></div><div class="bcount">4 stories not started</div>
+        <div class="item"><b>Verification center.</b> Unified findings and discrepancy view for the underwriter.</div>
+        <div class="item"><b>Discrepancy accept and reject.</b> With permanently recorded reason codes.</div>
+        <div class="item"><b>Truth-proposal handoff.</b> The same output-contract dependency that gates the analyzers.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ LEXI ============ -->
+  <div class="panel" data-panel="lexi">
+    <div class="modband" style="border-left-color:#C77DBB;">
+      <div><div class="mtitle">Lexi Intelligence</div><div class="msub">Agent orchestration and Generative UI. v1 is back online answering questions from pricing data.</div></div>
+      <div class="release">Target MVP<b class="est">6 July</b>team committed</div>
+    </div>
+    <div class="row3">
+      <div class="card"><div class="label">Delivery progress</div><div><span class="bignum">55<span class="unit">%</span></span><span class="pill amber">In progress</span></div><div class="track"><div class="fill" data-w="55" style="background:#C77DBB;"></div></div><div class="note">11 of 20 stories accepted. v1 orchestration and the Generative UI kit are live.</div></div>
+      <div class="card"><div class="label">In progress</div><div><span class="bignum">0</span></div><div class="note">Between milestones. v1 delivered, the autonomy layer not yet started.</div></div>
+      <div class="card"><div class="label">Remaining</div><div><span class="bignum">9</span></div><div class="note">Background autonomy and the workflow approval surface.</div></div>
+    </div>
+    <div class="buckets">
+      <div class="bucket green"><div class="bhead"><span class="ico"></span><span class="ttl">Delivered</span></div><div class="bcount">11 stories accepted</div>
+        <div class="item"><b>Orchestration v1.</b> Plan generation, sequencing, live progress.</div>
+        <div class="item"><b>Generative UI kit.</b> Component library and interactive form flow with validation.</div>
+        <div class="item"><b>Edit-from-chat.</b> First end-to-end agent use case, plus direct field updates.</div>
+      </div>
+      <div class="bucket amber"><div class="bhead"><span class="ico"></span><span class="ttl">In progress</span></div><div class="bcount">interim home: Slack</div>
+        <div class="item"><b>Q&amp;A on pricing data.</b> Lexi answers from the engine, surfaced through Slack for now.</div>
+      </div>
+      <div class="bucket grey"><div class="bhead"><span class="ico"></span><span class="ttl">Remaining</span></div><div class="bcount">9 stories not started</div>
+        <div class="item"><b>Background autonomy.</b> Auto-detect evidence, trigger analyzers, plan remediation for gaps.</div>
+        <div class="item"><b>Truth-proposal routing.</b> Generate proposals from findings, route to the right approver.</div>
+        <div class="item"><b>Approval surface and resilience.</b> Approve or reject in the workflow view, retry and recovery.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ BANK STATEMENT ANALYZER (measurement phase) ============ -->
+  <div class="panel" data-panel="bank">
+    <div class="modband" style="border-left-color:#1E6FE0;">
+      <div><div class="mtitle">Bank Statement Analyzer</div><div class="msub">Production-readiness measurement. Six capabilities scored against target by business impact.</div></div>
+      <div class="release">Projected production<b class="est">~6 July</b>once the blocked item lands</div>
+    </div>
+    <div class="row3">
+      <div class="card"><div class="label">Production readiness</div><div><span class="bignum">77<span class="unit">%</span></span><span class="pill amber">On track</span></div><div class="track"><div class="fill" data-w="77"></div></div><div class="note">Weighted across five scored capabilities by business impact. Reads accuracy heaviest.</div></div>
+      <div class="card"><div class="label">Capabilities at standard</div><div><span class="bignum">4</span><span class="unit" style="font-size:20px;color:#5A6B82;">of 6</span></div><div class="note">Two at target, two near, one blocked, one pending baseline.</div></div>
+      <div class="card"><div class="label">The gap to 100</div><div style="font-size:13px;color:#2A3A4F;line-height:1.5;margin-top:4px;"><b style="color:#0B1F3A;">23 points.</b> 20 from one blocked capability, ~2 from two near-target gaps, cost parked until finance sets a baseline.</div></div>
+    </div>
+    <div class="buckets">
+      <div class="bucket green"><div class="bhead"><span class="ico"></span><span class="ttl">Achieved</span></div><div class="bcount">at or above target</div>
+        <div class="item"><b>Reads statements correctly.<span class="wt">30%</span></b> Extraction at the quality bar and steady.</div>
+        <div class="item"><b>Catches problems a human would.<span class="wt">25%</span></b> Detection holding above standard.</div>
+      </div>
+      <div class="bucket amber"><div class="bhead"><span class="ico"></span><span class="ttl">Holding</span></div><div class="bcount">near target, climbing</div>
+        <div class="item"><b>Handles statement variety.<span class="wt">15%</span></b> Most processed end to end, gap closing.</div>
+        <div class="item"><b>Fast enough for the workflow.<span class="wt">7%</span></b> Trending to target.</div>
+      </div>
+      <div class="bucket red"><div class="bhead"><span class="ico"></span><span class="ttl">Must complete</span></div><div class="bcount">named gaps</div>
+        <div class="item"><b>Output the system trusts.<span class="wt">20%</span></b> Blocked on the output contract.</div>
+        <div class="item"><b>Cost at scale.<span class="wt">3%</span></b> Baseline pending finance input.</div>
+      </div>
+    </div>
+    <details class="detail" open>
+      <summary>By the numbers — current vs target across the six metrics</summary>
+      <table>
+        <thead><tr>
+          <th>Capability</th>
+          <th>Weight<span class="info" tabindex="0">i<span class="tip"><b>Share of the score this capability carries.</b> Set by business impact: how badly a loan is hurt if this is wrong or missing. Reading correctly is heaviest; cost lowest because it never blocks a loan.</span></span></th>
+          <th>Current<span class="info" tabindex="0">i<span class="tip">Where the metric sits today. "Not emitted" means the analyzer does not yet produce this output, so there is nothing to measure. "Measured" means data flows but no target exists to score against.</span></span></th>
+          <th>Target</th>
+          <th>Status<span class="info tip-left" tabindex="0">i<span class="tip"><b>At target:</b> at or rounding into standard. <b>Near:</b> within 5% and climbing. <b>Blocked:</b> cannot be measured until built. <b>No target:</b> measured but no bar set.</span></span></th>
+        </tr></thead>
+        <tbody>
+          <tr><td>Reads statements correctly<span class="info" tabindex="0">i<span class="tip"><b>Field-level extraction accuracy.</b> Does the analyzer pull the right numbers off the statement: deposits, balances, dates, account details. Measured field by field against a labeled reference set. The foundation: every downstream decision inherits these reads.</span></span></td><td><b>30%</b></td><td>93.8%</td><td>95%</td><td><span class="st ok">At target</span></td></tr>
+          <tr><td>Catches problems a human would<span class="info" tabindex="0">i<span class="tip"><b>Discrepancy detection.</b> Does it flag the issues a trained reviewer would: NSF activity, irregular deposits, inconsistencies. Measured as recall (caught vs all true issues) and precision (real vs all flagged). This is the verification value of the analyzer.</span></span></td><td><b>25%</b></td><td>91% / 82%</td><td>90% / 80%</td><td><span class="st ok">At target</span></td></tr>
+          <tr><td>Output the system trusts<span class="info" tabindex="0">i<span class="tip"><b>Verified Truth proposal acceptance.</b> When the analyzer finishes, does it hand the system a clean structured proposal that flows into Verified Truth without a human re-keying it. Blocked until the analyzer emits this proposal and the accept/edit/reject signal is wired.</span></span></td><td><b>20%</b></td><td>Not emitted</td><td>70%</td><td><span class="st blk">Blocked</span></td></tr>
+          <tr><td>Handles statement variety<span class="info" tabindex="0">i<span class="tip"><b>Coverage rate.</b> Share of real-world statements processed end to end without a person stepping in: clean template, OCR-rescued, or vision-rescued. A gap means manual fallback, not a wrong answer.</span></span></td><td><b>15%</b></td><td>78%</td><td>85%</td><td><span class="st near">Near</span></td></tr>
+          <tr><td>Fast enough for the workflow<span class="info" tabindex="0">i<span class="tip"><b>Time to findings.</b> How long from upload to results, measured at p95 so the typical worst case is covered. A slow answer is still correct; this is about workflow experience, not accuracy.</span></span></td><td><b>7%</b></td><td>p95 ~99s</td><td>p95 &lt; 90s</td><td><span class="st near">Near</span></td></tr>
+          <tr><td>Economical at scale<span class="info tip-left" tabindex="0">i<span class="tip"><b>Cost per statement.</b> Tokens and dollar cost to process one statement, summed across pipeline stages. Measured today, but no target exists yet. Finance sets the bar; until then it is held out of the score.</span></span></td><td><b>3%</b></td><td>Measured</td><td>TBD</td><td><span class="st none">No target</span></td></tr>
+        </tbody>
+      </table>
+    </details>
+  </div>
+
+  <!-- ============ ID ANALYZER ============ -->
+  <div class="panel" data-panel="id">
+    <div class="modband" style="border-left-color:#E0913B;">
+      <div><div class="mtitle">Identification Analyzer <span class="assumed">Scaffolding done</span></div><div class="msub">Extracts and validates borrower identity from government-issued ID. Builds on the analyzer framework.</div></div>
+      <div class="release">Target MVP<b class="est">1 July</b>team committed</div>
+    </div>
+    <div class="row3">
+      <div class="card"><div class="label">Delivery progress</div><div><span class="bignum">30<span class="unit">%</span></span><span class="pill grey">Early build</span></div><div class="track"><div class="fill" data-w="30" style="background:#E0913B;"></div></div><div class="note">Inherits the live analyzer framework. Identity-specific extraction and validation ahead. <span style="color:#8A5A00;">Figures assumed.</span></div></div>
+      <div class="card"><div class="label">In progress</div><div><span class="bignum">1</span></div><div class="note">Identity field extraction wired onto the analyzer service.</div></div>
+      <div class="card"><div class="label">Remaining</div><div><span class="bignum">—</span></div><div class="note">Validation rules and discrepancy checks to be scoped into stories.</div></div>
+    </div>
+    <div class="buckets">
+      <div class="bucket green"><div class="bhead"><span class="ico"></span><span class="ttl">Delivered</span></div><div class="bcount">inherited foundation</div>
+        <div class="item"><b>Analyzer framework.</b> Structured findings, provenance, run history, auto re-run all reused.</div>
+      </div>
+      <div class="bucket amber"><div class="bhead"><span class="ico"></span><span class="ttl">In progress</span></div><div class="bcount">early build</div>
+        <div class="item"><b>Identity field extraction.</b> Name, date of birth, document number, issue and expiry, issuing authority.</div>
+      </div>
+      <div class="bucket grey"><div class="bhead"><span class="ico"></span><span class="ttl">Remaining</span></div><div class="bcount">to be scoped</div>
+        <div class="item"><b>Validation and flags.</b> Expired ID, name or date-of-birth mismatch against the application and credit data.</div>
+        <div class="item"><b>Eligibility checks.</b> Document type and residency status against program rules.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ TAX DOCS ANALYZER ============ -->
+  <div class="panel" data-panel="tax">
+    <div class="modband" style="border-left-color:#5A8FB5;">
+      <div><div class="mtitle">Tax Docs Analyzer <span class="assumed">Scaffolding done</span></div><div class="msub">Personal and business tax returns and income forms. Release Two scope.</div></div>
+      <div class="release">Target MVP<b class="est">3 July</b>team committed</div>
+    </div>
+    <div class="row3">
+      <div class="card"><div class="label">Delivery progress</div><div><span class="bignum">30<span class="unit">%</span></span><span class="pill grey">Early build</span></div><div class="track"><div class="fill" data-w="30" style="background:#5A8FB5;"></div></div><div class="note">Framework scaffolding in place. Form-specific extraction is the bulk of the work, planned for Release Two. <span style="color:#8A5A00;">Figures assumed.</span></div></div>
+      <div class="card"><div class="label">In progress</div><div><span class="bignum">—</span></div><div class="note">Scoping the form coverage and extraction targets.</div></div>
+      <div class="card"><div class="label">Remaining</div><div><span class="bignum">—</span></div><div class="note">Per-form analyzers across the full document set.</div></div>
+    </div>
+    <div class="buckets">
+      <div class="bucket green"><div class="bhead"><span class="ico"></span><span class="ttl">Delivered</span></div><div class="bcount">inherited foundation</div>
+        <div class="item"><b>Analyzer framework.</b> The same structured-findings and provenance plumbing the other analyzers use.</div>
+      </div>
+      <div class="bucket amber"><div class="bhead"><span class="ico"></span><span class="ttl">In progress</span></div><div class="bcount">scoping</div>
+        <div class="item"><b>Coverage definition.</b> Which forms, which fields, which discrepancy checks.</div>
+      </div>
+      <div class="bucket grey"><div class="bhead"><span class="ico"></span><span class="ttl">Remaining (planned coverage)</span></div><div class="bcount">Release Two</div>
+        <div class="item"><b>Personal returns.</b> Form 1040 with all schedules: AGI, wages, self-employment, rental income.</div>
+        <div class="item"><b>Business returns.</b> Forms 1065, 1120-S, 1120: revenue, ordinary income, distributions, ownership.</div>
+        <div class="item"><b>Income forms.</b> W-2, the 1099 family, and Schedule K-1 variants.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot">LendLogic · Viewnear for Lendz Financial · Pricing, Underwriting, Lexi reflect live story status from the program board. Verified Truth, ID, and Tax figures are assumed pending detailed story tracking.</div>
+
+</div>
+
+<script>
+  const tabs = document.querySelectorAll('.tab');
+  const panels = document.querySelectorAll('.panel');
+  function animateFills(panel) {
+    panel.querySelectorAll('.fill').forEach(f => {
+      const w = f.getAttribute('data-w');
+      f.style.width = '0';
+      requestAnimationFrame(() => setTimeout(() => { f.style.width = w + '%'; }, 60));
+    });
+  }
+  tabs.forEach(t => t.addEventListener('click', () => {
+    tabs.forEach(x => x.classList.remove('active'));
+    panels.forEach(p => p.classList.remove('active'));
+    t.classList.add('active');
+    const panel = document.querySelector('.panel[data-panel="' + t.dataset.tab + '"]');
+    panel.classList.add('active');
+    animateFills(panel);
+  }));
+  window.addEventListener('load', () => animateFills(document.querySelector('.panel.active')));
+</script>
+</body>
+</html>

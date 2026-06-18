@@ -45,4 +45,11 @@ Whole-branch final review (opus, package .git/sdd/final-review-527d0b1..HEAD.dif
   - Deferred (acceptable v1 follow-ups): api.test URL/message assertions; InfoTooltip flipLeft; MetricsTable at_target row; Masthead locale date; DeliveryPanel AssumedBadge/accentColor paths; MeasurementPanel On track pill; App find()! (plan-mandated).
   - PLAN-LEVEL deviations from "ported verbatim" (in the plan, not the code) — FOR USER DECISION / phase 2: PoC has 9 info tooltips, MetricsTable renders 1 (Current header); Masthead shows "as of <localeString>" vs PoC "Snapshot 16 June 2026 · Target window: mid-July"; PoC .foot disclaimer line dropped (CSS ported but unused) — its "figures assumed" caveat is now conveyed per-module via assumed badges. MeasurementPanel hardcodes pill amber (status field unused in UI; matches PoC).
 
-Final state: Tasks 1-12 complete + build fix + final-review test. 21/21 tests, build green, no secrets. Ready for push + PR (NO merge without user OK).
+Final state (pre-deploy): Tasks 1-12 complete + build fix + final-review test. 21/21 tests, build green, no secrets.
+
+Task 13 (deploy + manual verification) — 2026-06-18:
+  - Branch merged feature -> develop -> main (user OK), pushed to origin; Vercel project linked (lendz-dashboard).
+  - DECISION (user): disabled Vercel Deployment Protection (SSO) so v1 matches the spec model (unguessable URL + noindex, no auth until phase 3). `vercel project protection disable --sso`. Real auth lands in phase 3.
+  - DEPLOY BUG FOUND + FIXED on branch fix/api-readiness-deploy (commit 594c9a4): live `GET /api/readiness` returned 500 (ERR_MODULE_NOT_FOUND) because the ESM runtime needs explicit file extensions; `api/readiness.ts` imported '../shared/readiness' without `.js`. Vitest/tsc tolerate it, so it only surfaced on the real Vercel runtime. Latent scaffold bug (deploy never worked) — fixed forward, not reverted, same as the earlier tsc -b build fix. Also added .vercelignore: Vercel was deploying api/readiness.test.ts as a bogus /api/readiness.test function. Added a regression test (relative imports must carry .js). Suite 22/22.
+  - Verified live (preview, prebuilt deploy): `GET /` 200 + X-Robots-Tag noindex; `GET /api/readiness` 200 application/json with 7 modules in PoC order + bank composite 77/97; `/api/readiness.test` now 404. `npm run build` green; `npx vitest run` 22/22.
+  - PENDING user OK: merge fix -> develop -> main (the 500 bug is still in main's code); optional `vercel --prod` promotion once main carries the fix.

@@ -66,7 +66,9 @@ export async function fetchBoardStories(opts: {
     token,
     `query { boards(ids: ${boardId}) { items_page(limit: ${pageLimit}) { cursor items { name column_values(ids: ${cols}) { id text } } } } }`,
   )
-  let page = (firstData.boards as Array<{ items_page: ItemsPage }>)[0].items_page
+  const firstBoard = (firstData.boards as Array<{ items_page: ItemsPage }>)[0]
+  if (!firstBoard) throw new Error(`Monday board ${boardId} not found`)
+  let page = firstBoard.items_page
   out.push(...page.items.map((i) => toStory(i, moduleColumnId)))
 
   while (page.cursor) {
@@ -75,6 +77,7 @@ export async function fetchBoardStories(opts: {
       token,
       `query { next_items_page(limit: ${pageLimit}, cursor: "${page.cursor}") { cursor items { name column_values(ids: ${cols}) { id text } } } }`,
     )
+    if (!nextData.next_items_page) throw new Error('Monday API: missing next_items_page in paginated response')
     page = nextData.next_items_page as ItemsPage
     out.push(...page.items.map((i) => toStory(i, moduleColumnId)))
   }

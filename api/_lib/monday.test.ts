@@ -52,3 +52,11 @@ test('throws on a non-ok HTTP response', async () => {
     fetchImpl: fetchImpl as unknown as typeof fetch,
   })).rejects.toThrow(/HTTP 500/)
 })
+
+test('throws a descriptive error when boards array is empty', async () => {
+  const fetchImpl = vi.fn().mockResolvedValue(jsonRes({ boards: [] }))
+  await expect(fetchBoardStories({
+    token: 't', boardId: 99, moduleColumnId: 'm',
+    fetchImpl: fetchImpl as unknown as typeof fetch,
+  })).rejects.toThrow(/not found/)
+})

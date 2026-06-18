@@ -12,8 +12,8 @@ afterEach(() => vi.clearAllMocks())
 
 test('renders the first module after load and switches tabs', async () => {
   render(<App />)
-  // 'Pricing & Eligibility' appears in both the tab button and the panel's mtitle — use getAllByText
-  await waitFor(() => expect(screen.getAllByText('Pricing & Eligibility').length).toBeGreaterThanOrEqual(1))
+  // 2 = the active tab button plus the rendered panel's mtitle
+  await waitFor(() => expect(screen.getAllByText('Pricing & Eligibility')).toHaveLength(2))
   await userEvent.click(screen.getByRole('tab', { name: /Bank Statement Analyzer/ }))
   expect(screen.getByText('Capabilities at standard')).toBeInTheDocument()
 })

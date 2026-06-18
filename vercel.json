@@ -1,4 +1,5 @@
 {
+  "crons": [{ "path": "/api/refresh", "schedule": "*/15 * * * *" }],
   "headers": [
     { "source": "/(.*)", "headers": [{ "key": "X-Robots-Tag", "value": "noindex" }] }
   ]

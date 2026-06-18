@@ -14,7 +14,7 @@ export function BucketColumn({ tone, title, count, items }: {
         <span className="ico" />
         <span className="ttl">{title}</span>
       </div>
-      {count && <div className="bcount">{count}</div>}
+      {count != null && <div className="bcount">{count}</div>}
       {items.map((it, i) => (
         <div className="item" key={i}>
           <b>

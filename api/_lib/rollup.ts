@@ -8,6 +8,7 @@ import {
   bucketForStatus,
   cleanTitle,
   moduleKeyForLabel,
+  SHARED_LABEL,
   statusFromPercent,
   STATUS_LABELS,
   type ModuleKey,
@@ -53,6 +54,10 @@ function buildModulesForKeys(stories: RawStory[], keys: readonly ModuleKey[]): R
   const byKey: Record<string, RawStory[]> = {}
   for (const k of keys) byKey[k] = []
   for (const s of stories) {
+    if (s.module === SHARED_LABEL) {
+      for (const k of keys) byKey[k].push(s)
+      continue
+    }
     const key = moduleKeyForLabel(s.module)
     if (key && byKey[key]) byKey[key].push(s)
   }

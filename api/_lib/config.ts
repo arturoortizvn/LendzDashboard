@@ -52,6 +52,9 @@ export const MODULE_LABELS: Record<string, ModuleKey> = {
   Tax: 'tax',
 }
 
+// Module label whose items count toward every analyzer module, not just one.
+export const SHARED_LABEL = 'Shared'
+
 export function moduleKeyForLabel(label: string | null | undefined): ModuleKey | null {
   if (!label) return null
   return MODULE_LABELS[label] ?? null

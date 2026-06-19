@@ -73,6 +73,20 @@ test('buildAnalyzerModules excludes unmapped and null-label items', () => {
   expect(a.tax.assumed).toBe(true)
 })
 
+test('buildAnalyzerModules fans Shared stories to bank, id, and tax', () => {
+  const stories: RawStory[] = [
+    { name: 'Shared infra', status: 'Done', module: 'Shared' },
+    { name: 'Implement Bank Statement Analyzer', status: 'Working on it', module: 'Bank' },
+  ]
+  const a = buildAnalyzerModules(stories)
+  expect(a.bank.counts).toEqual({ delivered: 1, inProgress: 1, remaining: 0 })
+  expect(a.id.counts).toEqual({ delivered: 1, inProgress: 0, remaining: 0 })
+  expect(a.tax.counts).toEqual({ delivered: 1, inProgress: 0, remaining: 0 })
+  expect(a.bank.assumed).toBe(false)
+  expect(a.id.assumed).toBe(false)
+  expect(a.tax.assumed).toBe(false)
+})
+
 test('zero-stories assumed: module without base assumedLabel gets fallback label, module with base label preserves it', () => {
   const pe = buildDeliveryModule('pe', [])
   expect(pe.assumed).toBe(true)

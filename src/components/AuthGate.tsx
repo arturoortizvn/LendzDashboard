@@ -14,10 +14,8 @@ export function AuthGate({ children }: { children: ReactNode }) {
   return (
     <>
       <SignedOut>
-        <div className="wrap">
-          <div className="card">
-            <SignIn appearance={signInAppearance} />
-          </div>
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 'calc(100vh - 56px)' }}>
+          <SignIn appearance={signInAppearance} />
         </div>
       </SignedOut>
       <SignedIn>{children}</SignedIn>

@@ -6,6 +6,8 @@ import {
   statusFromPercent,
   DELIVERY_KEYS,
   FORCE_ASSUMED,
+  getBoardId,
+  BOARD_ID,
 } from './config'
 
 test('maps Monday statuses to buckets, unknown/blank → remaining', () => {
@@ -52,4 +54,19 @@ test('DELIVERY_KEYS excludes bank and is in PoC order', () => {
 test('FORCE_ASSUMED holds vt/id/tax only', () => {
   expect([...FORCE_ASSUMED].sort()).toEqual(['id', 'tax', 'vt'])
   expect(FORCE_ASSUMED.has('pe')).toBe(false)
+})
+
+test('getBoardId returns BOARD_ID for 0, invalid, or unset; returns parsed number for valid ids', () => {
+  const orig = process.env.ID_MONDAY
+
+  process.env.ID_MONDAY = '0'
+  expect(getBoardId()).toBe(BOARD_ID)
+
+  process.env.ID_MONDAY = 'not-a-number'
+  expect(getBoardId()).toBe(BOARD_ID)
+
+  process.env.ID_MONDAY = '99999'
+  expect(getBoardId()).toBe(99999)
+
+  process.env.ID_MONDAY = orig
 })

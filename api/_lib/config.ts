@@ -73,7 +73,8 @@ export function getModuleColumnId(): string {
 }
 
 export function getBoardId(): number {
-  return Number(process.env.ID_MONDAY) || BOARD_ID
+  const n = Number(process.env.ID_MONDAY)
+  return Number.isFinite(n) && n > 0 ? n : BOARD_ID
 }
 
 export function getCronSecret(): string {

@@ -35,6 +35,7 @@ test('assembleLivePayload returns 7 modules in PoC order, bank from fixture, sou
   expect(p.modules.map((m) => m.key)).toEqual(['pe', 'vt', 'uw', 'lexi', 'bank', 'id', 'tax'])
   expect(p.source).toBe('live')
   expect(p.builtAt).toBe('2026-06-18T00:00:00Z')
+  expect(p.asOf).toBe('2026-06-18T00:00:00Z')
   expect(p.modules.find((m) => m.key === 'bank')).toBe(MODULES_BY_KEY['bank'])
 })
 

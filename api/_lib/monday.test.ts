@@ -60,3 +60,20 @@ test('throws a descriptive error when boards array is empty', async () => {
     fetchImpl: fetchImpl as unknown as typeof fetch,
   })).rejects.toThrow(/not found/)
 })
+
+test('throws when paginated response is missing next_items_page', async () => {
+  const page1 = { boards: [{ items_page: { cursor: 'C1', items: [
+    { name: 'Story A', column_values: [
+      { id: 'task_status', text: 'Done' },
+      { id: 'status_module', text: null },
+    ] },
+  ] } }] }
+  const fetchImpl = vi.fn()
+    .mockResolvedValueOnce(jsonRes(page1))
+    .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ data: {} }) })
+
+  await expect(fetchBoardStories({
+    token: 't', boardId: 1, moduleColumnId: 'status_module',
+    fetchImpl: fetchImpl as unknown as typeof fetch,
+  })).rejects.toThrow(/missing next_items_page/)
+})

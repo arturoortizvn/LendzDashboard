@@ -18,6 +18,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     await writeLatest(payload)
     return res.status(200).json({ ok: true, modules: payload.modules.length, builtAt: payload.builtAt })
   } catch (e) {
-    return res.status(500).json({ error: (e as Error).message })
+    return res.status(500).json({ error: e instanceof Error ? e.message : String(e) })
   }
 }

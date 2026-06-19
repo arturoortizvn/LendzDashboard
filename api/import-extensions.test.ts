@@ -17,9 +17,9 @@ function tsFiles(dir: string): string[] {
 test('every relative import under api/ carries an explicit .js extension', () => {
   for (const file of tsFiles(apiDir)) {
     const src = readFileSync(file, 'utf8')
-    const relativeImports = src.match(/from '(\.\.?\/[^']+)'/g) ?? []
+    const relativeImports = src.match(/from ['"](\.\.?\/[^'"]+)['"]/g) ?? []
     for (const imp of relativeImports) {
-      expect(imp, `${file}: ${imp}`).toMatch(/\.js'$/)
+      expect(imp, `${file}: ${imp}`).toMatch(/\.js['"]$/)
     }
   }
 })

@@ -2,9 +2,22 @@ import type { Status } from '../../shared/readiness.js'
 
 export const BOARD_ID = 18402839374
 
+export const ANALYZER_BOARD_ID = 18403908550
+
+export function getAnalyzerBoardId(): number {
+  const n = Number(process.env.ID_MONDAY_ANALYZERS)
+  return Number.isFinite(n) && n > 0 ? n : ANALYZER_BOARD_ID
+}
+
+export function getAnalyzerColumnId(): string {
+  return process.env.MONDAY_ANALYZER_COLUMN_ID ?? ''
+}
+
 export type ModuleKey = 'pe' | 'vt' | 'uw' | 'lexi' | 'bank' | 'id' | 'tax'
 
 export const DELIVERY_KEYS: readonly ModuleKey[] = ['pe', 'vt', 'uw', 'lexi', 'id', 'tax']
+
+export const ANALYZER_KEYS: readonly ModuleKey[] = ['bank', 'id', 'tax']
 
 export const FORCE_ASSUMED: ReadonlySet<ModuleKey> = new Set<ModuleKey>(['vt', 'id', 'tax'])
 
@@ -13,9 +26,11 @@ export type Bucket = 'delivered' | 'inProgress' | 'remaining'
 export const STATUS_BUCKET: Record<string, Bucket> = {
   Done: 'delivered',
   'In Progress': 'inProgress',
+  'Working on it': 'inProgress',
   'Code Review': 'inProgress',
   QA: 'inProgress',
   'Ready to start': 'remaining',
+  'Not Started': 'remaining',
   Stuck: 'remaining',
   '': 'remaining',
 }
@@ -32,6 +47,9 @@ export const MODULE_LABELS: Record<string, ModuleKey> = {
   'ID Analyzer': 'id',
   'Tax Analyzer': 'tax',
   'Bank Analyzer': 'bank',
+  Bank: 'bank',
+  ID: 'id',
+  Tax: 'tax',
 }
 
 export function moduleKeyForLabel(label: string | null | undefined): ModuleKey | null {

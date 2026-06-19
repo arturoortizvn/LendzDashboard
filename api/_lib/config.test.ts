@@ -8,6 +8,10 @@ import {
   FORCE_ASSUMED,
   getBoardId,
   BOARD_ID,
+  ANALYZER_KEYS,
+  getAnalyzerBoardId,
+  getAnalyzerColumnId,
+  ANALYZER_BOARD_ID,
 } from './config'
 
 test('maps Monday statuses to buckets, unknown/blank → remaining', () => {
@@ -69,4 +73,37 @@ test('getBoardId returns BOARD_ID for 0, invalid, or unset; returns parsed numbe
   expect(getBoardId()).toBe(99999)
 
   process.env.ID_MONDAY = orig
+})
+
+test('maps the Analyzers-board statuses to buckets', () => {
+  expect(bucketForStatus('Working on it')).toBe('inProgress')
+  expect(bucketForStatus('Not Started')).toBe('remaining')
+})
+
+test('maps the Analyzers Module labels to keys', () => {
+  expect(moduleKeyForLabel('Bank')).toBe('bank')
+  expect(moduleKeyForLabel('ID')).toBe('id')
+  expect(moduleKeyForLabel('Tax')).toBe('tax')
+})
+
+test('ANALYZER_KEYS are bank/id/tax', () => {
+  expect(ANALYZER_KEYS).toEqual(['bank', 'id', 'tax'])
+})
+
+test('getAnalyzerBoardId returns ANALYZER_BOARD_ID for unset/invalid; parses valid ids', () => {
+  const orig = process.env.ID_MONDAY_ANALYZERS
+  delete process.env.ID_MONDAY_ANALYZERS
+  expect(getAnalyzerBoardId()).toBe(ANALYZER_BOARD_ID)
+  process.env.ID_MONDAY_ANALYZERS = '12345'
+  expect(getAnalyzerBoardId()).toBe(12345)
+  process.env.ID_MONDAY_ANALYZERS = orig
+})
+
+test('getAnalyzerColumnId returns empty string when unset', () => {
+  const orig = process.env.MONDAY_ANALYZER_COLUMN_ID
+  delete process.env.MONDAY_ANALYZER_COLUMN_ID
+  expect(getAnalyzerColumnId()).toBe('')
+  process.env.MONDAY_ANALYZER_COLUMN_ID = 'color_x'
+  expect(getAnalyzerColumnId()).toBe('color_x')
+  process.env.MONDAY_ANALYZER_COLUMN_ID = orig
 })

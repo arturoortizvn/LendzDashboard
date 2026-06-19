@@ -55,3 +55,25 @@ Task 13 (deploy + manual verification) — 2026-06-18:
   - Merged fix -> develop -> main (user OK), pushed; promoted to production (user OK): `vercel --prod`. Production verified live on the stable alias https://lendz-dashboard.vercel.app — `GET /` 200 + noindex, `GET /api/readiness` 200 application/json with 7 modules, `/api/readiness.test` 404.
 
 PHASE 1 CLOSED — 2026-06-18: Tasks 1-13 complete, all merged to main and live in production. 22/22 tests, build green, no secrets. Stale branch feature/scaffold-readiness-console deleted (local + remote) after full merge. Next: phase 2 (live Monday + metrics DB behind the same /api/readiness contract) is blocked on external inputs — Monday API token/account + board 18402839374, metrics DB read access + the six Bank Analyzer KPI table/columns, and the VT/ID/Tax config-vs-board decision. See memory deployment-reference and readiness-data-source-roadmap.
+
+---
+
+# PHASE 2a — Live Monday connector (delivery modules) — CLOSED 2026-06-19
+
+Spec: `docs/superpowers/specs/2026-06-18-phase2-monday-connector-design.md` · Plan: `docs/superpowers/plans/2026-06-18-phase2-monday-connector.md` · Branch: `feature/phase2-monday-connector` (merged). Full task-by-task controller detail: `.git/sdd/progress.md` (local).
+
+**DEPLOYED & LIVE in production:** https://lendz-dashboard.vercel.app (`GET /api/readiness` → `source:live`). Built subagent-driven: 7 TDD tasks + per-task reviews + whole-branch review (opus) + fixes; then live deploy.
+
+**Scope:** replaced the static delivery-module numbers with a live Monday rollup behind the unchanged `GET /api/readiness` contract. Bank Analyzer stays fixture (Phase 2b).
+
+**Architecture:** Vercel Cron (every 15 min) → `CRON_SECRET`-guarded `/api/refresh` → Monday GraphQL (board `18402839374`, "Module" status column `color_mm4e3r3v`) → status→bucket rollup per module → assemble payload → write **Vercel Blob** `readiness-lkg` (public, last-known-good). `GET /api/readiness` only reads the Blob; config-baseline fallback when empty. Monday token lives only on the cron path. Failure modes: a cron Monday-failure does not overwrite the Blob; the request never 500s on a missing Blob.
+
+**Live result (validated 2026-06-19):** pe 53% / uw 62% / lexi 50% computed live from the board; vt 55% / id 30% / tax 30% **force-assumed** (`FORCE_ASSUMED` set — agreed figures + badge) per guide §3.3 until their stories are fully tracked; bank 77% fixture. 51/51 tests, `npm run build` green.
+
+**Key decisions / findings:** the board had no reliable module dimension (47% epic coverage, 0 tax) → added a Monday **"Module" column** as the mapping contract (prefix/epic rejected); **items-live** (bucket items = real story titles by status); **last-known-good in Vercel Blob**; **cron rebuild + request-reads-Blob**; **Vercel Pro** for 15-min crons. Real board labels differ from the v1 guesses (`Pricing and Eligibility`, `Lexi Intelligence`, `Tax Analyzer`) — caught + fixed before deploy.
+
+**Refs at close:** `main` = `origin/main` = `671175a` (= what's deployed in production); `develop` = `origin/develop` = `f3fca0e` (release + review follow-up cleanups, not yet deployed — reach main/prod on the next deploy).
+
+**OPEN:**
+1. **Rotate `MONDAY_API_TOKEN`** — it appeared in plaintext in a chat transcript. Revoke in Monday → new token → re-set Prod+Preview (`vercel env rm/add --yes`) → `vercel --prod` (that redeploy also carries the `develop` cleanups to main/prod; ff `develop→main` with explicit OK).
+2. **Phase 2b** — Bank Analyzer composite from the metrics DB; blocked on DB read access + the six KPI table/columns from Javi.

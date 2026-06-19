@@ -3,13 +3,18 @@ import { fetchReadiness } from './api'
 
 afterEach(() => vi.unstubAllGlobals())
 
-test('returns the parsed payload on success', async () => {
+test('attaches the bearer token and returns the parsed payload', async () => {
   const payload = { asOf: 'x', modules: [] }
-  vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve(payload) }))
-  await expect(fetchReadiness()).resolves.toEqual(payload)
+  const fetchSpy = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve(payload) })
+  vi.stubGlobal('fetch', fetchSpy)
+  await expect(fetchReadiness(async () => 'tok')).resolves.toEqual(payload)
+  expect(fetchSpy).toHaveBeenCalledWith(
+    '/api/readiness',
+    expect.objectContaining({ headers: { Authorization: 'Bearer tok' } }),
+  )
 })
 
-test('throws on non-ok response', async () => {
+test('throws on a non-ok response', async () => {
   vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 500 }))
-  await expect(fetchReadiness()).rejects.toThrow(/500/)
+  await expect(fetchReadiness(async () => 'tok')).rejects.toThrow(/500/)
 })

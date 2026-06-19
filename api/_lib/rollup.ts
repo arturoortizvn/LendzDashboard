@@ -2,6 +2,7 @@ import type { BucketItem, DeliveryModule, Module, ReadinessPayload } from '../..
 import { MODULES_BY_KEY } from '../../shared/readiness.js'
 import type { RawStory } from './monday.js'
 import {
+  ANALYZER_KEYS,
   DELIVERY_KEYS,
   FORCE_ASSUMED,
   bucketForStatus,
@@ -48,21 +49,33 @@ export function buildDeliveryModule(key: string, stories: RawStory[]): DeliveryM
   }
 }
 
-export function buildDeliveryModules(stories: RawStory[]): Record<string, DeliveryModule> {
+function buildModulesForKeys(stories: RawStory[], keys: readonly ModuleKey[]): Record<string, DeliveryModule> {
   const byKey: Record<string, RawStory[]> = {}
-  for (const k of DELIVERY_KEYS) byKey[k] = []
+  for (const k of keys) byKey[k] = []
   for (const s of stories) {
     const key = moduleKeyForLabel(s.module)
-    if (key && key !== 'bank' && byKey[key]) byKey[key].push(s)
+    if (key && byKey[key]) byKey[key].push(s)
   }
   const result: Record<string, DeliveryModule> = {}
-  for (const k of DELIVERY_KEYS) result[k] = buildDeliveryModule(k, byKey[k])
+  for (const k of keys) result[k] = buildDeliveryModule(k, byKey[k])
   return result
 }
 
-export function assembleLivePayload(stories: RawStory[], now: string): ReadinessPayload {
-  const d = buildDeliveryModules(stories)
-  const bank = MODULES_BY_KEY['bank']
-  const modules: Module[] = [d.pe, d.vt, d.uw, d.lexi, bank, d.id, d.tax]
+export function buildDeliveryModules(stories: RawStory[]): Record<string, DeliveryModule> {
+  return buildModulesForKeys(stories, DELIVERY_KEYS)
+}
+
+export function buildAnalyzerModules(stories: RawStory[]): Record<string, DeliveryModule> {
+  return buildModulesForKeys(stories, ANALYZER_KEYS)
+}
+
+export function assembleLivePayload(
+  storyStories: RawStory[],
+  analyzerStories: RawStory[],
+  now: string,
+): ReadinessPayload {
+  const d = buildDeliveryModules(storyStories)
+  const a = buildAnalyzerModules(analyzerStories)
+  const modules: Module[] = [d.pe, d.vt, d.uw, d.lexi, a.bank, a.id, a.tax]
   return { asOf: now, builtAt: now, source: 'live', modules }
 }

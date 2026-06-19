@@ -51,13 +51,12 @@ test('cleanTitle strips sprint and id prefixes but leaves plain titles', () => {
   expect(cleanTitle('CLTV calculation issue')).toBe('CLTV calculation issue')
 })
 
-test('DELIVERY_KEYS excludes bank and is in PoC order', () => {
-  expect(DELIVERY_KEYS).toEqual(['pe', 'vt', 'uw', 'lexi', 'id', 'tax'])
+test('DELIVERY_KEYS are the Stories-board modules', () => {
+  expect(DELIVERY_KEYS).toEqual(['pe', 'vt', 'uw', 'lexi'])
 })
 
-test('FORCE_ASSUMED holds vt/id/tax only', () => {
-  expect([...FORCE_ASSUMED].sort()).toEqual(['id', 'tax', 'vt'])
-  expect(FORCE_ASSUMED.has('pe')).toBe(false)
+test('FORCE_ASSUMED holds vt only', () => {
+  expect([...FORCE_ASSUMED]).toEqual(['vt'])
 })
 
 test('getBoardId returns BOARD_ID for 0, invalid, or unset; returns parsed number for valid ids', () => {

@@ -21,6 +21,7 @@ beforeEach(() => {
   process.env.MONDAY_API_TOKEN = 'tok'
   process.env.MONDAY_MODULE_COLUMN_ID = 'status_module'
   process.env.ID_MONDAY = '18402839374'
+  process.env.ID_MONDAY_ANALYZERS = '18403908550'
 })
 afterEach(() => vi.clearAllMocks())
 
@@ -32,13 +33,16 @@ test('rejects requests without the cron secret', async () => {
   expect(writeLatest).not.toHaveBeenCalled()
 })
 
-test('on success fetches, assembles, writes the blob, and returns 200', async () => {
+test('fetches both boards, assembles, writes the blob, and returns 200', async () => {
   vi.mocked(fetchBoardStories).mockResolvedValue([
     { name: 'F-01-06 · Eligibility', status: 'Done', module: 'Pricing & Eligibility' },
   ])
   const res = mockRes()
   await handler({ headers: { authorization: 'Bearer secret' } } as unknown as VercelRequest, res as VercelResponse)
   expect(res.statusCode).toBe(200)
+  expect(fetchBoardStories).toHaveBeenCalledTimes(2)
+  const boardIds = vi.mocked(fetchBoardStories).mock.calls.map((c) => c[0].boardId)
+  expect(boardIds).toContain(18403908550)
   expect(writeLatest).toHaveBeenCalledTimes(1)
 })
 

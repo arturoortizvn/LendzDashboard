@@ -15,11 +15,11 @@ export function getAnalyzerColumnId(): string {
 
 export type ModuleKey = 'pe' | 'vt' | 'uw' | 'lexi' | 'bank' | 'id' | 'tax'
 
-export const DELIVERY_KEYS: readonly ModuleKey[] = ['pe', 'vt', 'uw', 'lexi', 'id', 'tax']
+export const DELIVERY_KEYS: readonly ModuleKey[] = ['pe', 'vt', 'uw', 'lexi']
 
 export const ANALYZER_KEYS: readonly ModuleKey[] = ['bank', 'id', 'tax']
 
-export const FORCE_ASSUMED: ReadonlySet<ModuleKey> = new Set<ModuleKey>(['vt', 'id', 'tax'])
+export const FORCE_ASSUMED: ReadonlySet<ModuleKey> = new Set<ModuleKey>(['vt'])
 
 export type Bucket = 'delivered' | 'inProgress' | 'remaining'
 

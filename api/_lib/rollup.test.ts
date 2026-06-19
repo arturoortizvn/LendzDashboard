@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest'
-import { assembleLivePayload, buildDeliveryModule } from './rollup'
+import { assembleLivePayload, buildAnalyzerModules, buildDeliveryModule } from './rollup'
 import { MODULES_BY_KEY } from '../../shared/readiness'
 import type { DeliveryModule } from '../../shared/readiness'
 import type { RawStory } from './monday'
@@ -30,21 +30,47 @@ test('a module with no stories falls back to the assumed baseline', () => {
   expect(m.buckets).toBe((base as typeof m).buckets)
 })
 
-test('assembleLivePayload returns 7 modules in PoC order, bank from fixture, source live', () => {
-  const p = assembleLivePayload([], '2026-06-18T00:00:00Z')
+test('assembleLivePayload returns 7 modules in PoC order, source live', () => {
+  const p = assembleLivePayload([], [], '2026-06-18T00:00:00Z')
   expect(p.modules.map((m) => m.key)).toEqual(['pe', 'vt', 'uw', 'lexi', 'bank', 'id', 'tax'])
   expect(p.source).toBe('live')
   expect(p.builtAt).toBe('2026-06-18T00:00:00Z')
   expect(p.asOf).toBe('2026-06-18T00:00:00Z')
-  expect(p.modules.find((m) => m.key === 'bank')).toBe(MODULES_BY_KEY['bank'])
 })
 
-test('bank-labeled stories are ignored by the delivery rollup', () => {
+test('analyzer-labeled stories on the Stories board are ignored by the delivery rollup', () => {
   const stories: RawStory[] = [
     { name: 'U-02-01 · Bank Statement Analyzer', status: 'Done', module: 'Bank Analyzer' },
   ]
-  const byKey = assembleLivePayload(stories, 'now')
-  expect(byKey.modules.find((m) => m.key === 'bank')).toBe(MODULES_BY_KEY['bank'])
+  const p = assembleLivePayload(stories, [], 'now')
+  expect(p.modules.find((m) => m.key === 'bank')!.assumed).toBe(true)
+})
+
+test('buildAnalyzerModules routes Bank/ID/Tax labels and computes live', () => {
+  const stories: RawStory[] = [
+    { name: 'Implement Bank Statement Analyzer', status: 'Done', module: 'Bank' },
+    { name: 'Add AI usage tracking', status: 'Working on it', module: 'Bank' },
+    { name: 'Implement ID Document Analyzer', status: 'Not Started', module: 'ID' },
+  ]
+  const a = buildAnalyzerModules(stories)
+  expect(a.bank.assumed).toBe(false)
+  expect(a.bank.counts).toEqual({ delivered: 1, inProgress: 1, remaining: 0 })
+  expect(a.bank.percent).toBe(50)
+  expect(a.id.assumed).toBe(false)
+  expect(a.id.counts).toEqual({ delivered: 0, inProgress: 0, remaining: 1 })
+  expect(a.id.percent).toBe(0)
+  expect(a.tax.assumed).toBe(true)
+})
+
+test('buildAnalyzerModules excludes unmapped and null-label items', () => {
+  const stories: RawStory[] = [
+    { name: 'Implement Credit Report Analyzer', status: 'Done', module: 'Credit Report' },
+    { name: 'Item 4', status: '', module: null },
+  ]
+  const a = buildAnalyzerModules(stories)
+  expect(a.bank.assumed).toBe(true)
+  expect(a.id.assumed).toBe(true)
+  expect(a.tax.assumed).toBe(true)
 })
 
 test('zero-stories assumed: module without base assumedLabel gets fallback label, module with base label preserves it', () => {
@@ -72,7 +98,7 @@ test('assembleLivePayload routes a real Module label to its delivery module', ()
   const stories: RawStory[] = [
     { name: 'F-01-06 · Eligibility evaluation', status: 'Done', module: 'Pricing and Eligibility' },
   ]
-  const p = assembleLivePayload(stories, '2026-06-18T00:00:00Z')
+  const p = assembleLivePayload(stories, [], '2026-06-18T00:00:00Z')
   const pe = p.modules.find((m) => m.key === 'pe') as DeliveryModule | undefined
   expect(pe?.assumed).toBe(false)
   expect(pe?.counts.delivered).toBe(1)

@@ -6,21 +6,26 @@ vi.mock('@vercel/blob', () => ({ put: vi.fn(), head: vi.fn() }))
 
 afterEach(() => vi.clearAllMocks())
 
-test('writeLatest puts the JSON at the fixed path with overwrite enabled', async () => {
+test('writeLatest stores a private object at the fixed path with overwrite enabled', async () => {
   const payload = { asOf: 'x', modules: [], source: 'live' as const }
   await writeLatest(payload)
   expect(put).toHaveBeenCalledWith(
     'readiness/latest.json',
     JSON.stringify(payload),
-    expect.objectContaining({ access: 'public', contentType: 'application/json', addRandomSuffix: false, allowOverwrite: true }),
+    expect.objectContaining({ access: 'private', contentType: 'application/json', addRandomSuffix: false, allowOverwrite: true }),
   )
 })
 
-test('readLatest returns the parsed payload', async () => {
+test('readLatest fetches the blob with the read-write token and parses it', async () => {
+  process.env.BLOB_READ_WRITE_TOKEN = 'blob_tok'
   vi.mocked(head).mockResolvedValue({ url: 'https://blob/readiness/latest.json' } as never)
   const fetchImpl = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ asOf: 'y', modules: [] }) })
   const p = await readLatest(fetchImpl as unknown as typeof fetch)
   expect(p).toEqual({ asOf: 'y', modules: [] })
+  expect(fetchImpl).toHaveBeenCalledWith(
+    'https://blob/readiness/latest.json',
+    expect.objectContaining({ headers: { Authorization: 'Bearer blob_tok' } }),
+  )
 })
 
 test('readLatest returns null when the blob is missing', async () => {

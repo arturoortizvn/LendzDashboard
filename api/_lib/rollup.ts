@@ -3,16 +3,18 @@ import { MODULES_BY_KEY } from '../../shared/readiness.js'
 import type { RawStory } from './monday.js'
 import {
   DELIVERY_KEYS,
+  FORCE_ASSUMED,
   bucketForStatus,
   cleanTitle,
   moduleKeyForLabel,
   statusFromPercent,
   STATUS_LABELS,
+  type ModuleKey,
 } from './config.js'
 
 export function buildDeliveryModule(key: string, stories: RawStory[]): DeliveryModule {
   const base = MODULES_BY_KEY[key] as DeliveryModule
-  if (stories.length === 0) {
+  if (FORCE_ASSUMED.has(key as ModuleKey) || stories.length === 0) {
     return { ...base, assumed: true, assumedLabel: base.assumedLabel ?? 'Awaiting board data' }
   }
 

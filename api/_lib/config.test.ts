@@ -5,6 +5,7 @@ import {
   moduleKeyForLabel,
   statusFromPercent,
   DELIVERY_KEYS,
+  FORCE_ASSUMED,
 } from './config'
 
 test('maps Monday statuses to buckets, unknown/blank → remaining', () => {
@@ -46,4 +47,9 @@ test('cleanTitle strips sprint and id prefixes but leaves plain titles', () => {
 
 test('DELIVERY_KEYS excludes bank and is in PoC order', () => {
   expect(DELIVERY_KEYS).toEqual(['pe', 'vt', 'uw', 'lexi', 'id', 'tax'])
+})
+
+test('FORCE_ASSUMED holds vt/id/tax only', () => {
+  expect([...FORCE_ASSUMED].sort()).toEqual(['id', 'tax', 'vt'])
+  expect(FORCE_ASSUMED.has('pe')).toBe(false)
 })

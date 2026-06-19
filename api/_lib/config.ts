@@ -6,6 +6,8 @@ export type ModuleKey = 'pe' | 'vt' | 'uw' | 'lexi' | 'bank' | 'id' | 'tax'
 
 export const DELIVERY_KEYS: readonly ModuleKey[] = ['pe', 'vt', 'uw', 'lexi', 'id', 'tax']
 
+export const FORCE_ASSUMED: ReadonlySet<ModuleKey> = new Set<ModuleKey>(['vt', 'id', 'tax'])
+
 export type Bucket = 'delivered' | 'inProgress' | 'remaining'
 
 export const STATUS_BUCKET: Record<string, Bucket> = {

@@ -41,24 +41,25 @@ async function mondayRequest(
   return json.data ?? {}
 }
 
-function toStory(item: MondayItem, moduleColumnId: string): RawStory {
+function toStory(item: MondayItem, statusColumnId: string, moduleColumnId?: string): RawStory {
   const textOf = (id: string) => item.column_values.find((c) => c.id === id)?.text ?? null
   return {
     name: item.name,
-    status: textOf('task_status') ?? '',
-    module: textOf(moduleColumnId),
+    status: textOf(statusColumnId) ?? '',
+    module: moduleColumnId ? textOf(moduleColumnId) : null,
   }
 }
 
 export async function fetchBoardStories(opts: {
   token: string
   boardId: number
-  moduleColumnId: string
+  statusColumnId?: string
+  moduleColumnId?: string
   pageLimit?: number
   fetchImpl?: typeof fetch
 }): Promise<RawStory[]> {
-  const { token, boardId, moduleColumnId, pageLimit = 100, fetchImpl = fetch } = opts
-  const cols = JSON.stringify(['task_status', moduleColumnId])
+  const { token, boardId, statusColumnId = 'task_status', moduleColumnId, pageLimit = 100, fetchImpl = fetch } = opts
+  const cols = JSON.stringify(moduleColumnId ? [statusColumnId, moduleColumnId] : [statusColumnId])
   const out: RawStory[] = []
 
   const firstData = await mondayRequest(
@@ -69,7 +70,7 @@ export async function fetchBoardStories(opts: {
   const firstBoard = (firstData.boards as Array<{ items_page: ItemsPage }>)[0]
   if (!firstBoard) throw new Error(`Monday board ${boardId} not found`)
   let page = firstBoard.items_page
-  out.push(...page.items.map((i) => toStory(i, moduleColumnId)))
+  out.push(...page.items.map((i) => toStory(i, statusColumnId, moduleColumnId)))
 
   while (page.cursor) {
     const nextData = await mondayRequest(
@@ -79,7 +80,7 @@ export async function fetchBoardStories(opts: {
     )
     if (!nextData.next_items_page) throw new Error('Monday API: missing next_items_page in paginated response')
     page = nextData.next_items_page as ItemsPage
-    out.push(...page.items.map((i) => toStory(i, moduleColumnId)))
+    out.push(...page.items.map((i) => toStory(i, statusColumnId, moduleColumnId)))
   }
 
   return out

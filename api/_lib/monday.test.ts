@@ -61,6 +61,26 @@ test('throws a descriptive error when boards array is empty', async () => {
   })).rejects.toThrow(/not found/)
 })
 
+test('reads a custom status column and omits the module column when absent', async () => {
+  const page = { boards: [{ items_page: { cursor: null, items: [
+    { name: 'Implement Bank Statement Analyzer', column_values: [
+      { id: 'status', text: 'Not Started' },
+    ] },
+  ] } }] }
+  const fetchImpl = vi.fn().mockResolvedValueOnce(jsonRes(page))
+
+  const stories = await fetchBoardStories({
+    token: 't', boardId: 7, statusColumnId: 'status',
+    fetchImpl: fetchImpl as unknown as typeof fetch,
+  })
+
+  const sentBody = JSON.parse((fetchImpl.mock.calls[0][1] as { body: string }).body) as { query: string }
+  expect(sentBody.query).toContain('ids: ["status"]')
+  expect(stories).toEqual([
+    { name: 'Implement Bank Statement Analyzer', status: 'Not Started', module: null },
+  ])
+})
+
 test('throws when paginated response is missing next_items_page', async () => {
   const page1 = { boards: [{ items_page: { cursor: 'C1', items: [
     { name: 'Story A', column_values: [

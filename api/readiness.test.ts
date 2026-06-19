@@ -37,9 +37,11 @@ test('serves the last-known-good payload to an authenticated request, no shared 
   const res = mockRes()
   await handler({ headers: { authorization: 'Bearer t' } } as unknown as VercelRequest, res as VercelResponse)
   expect(res.statusCode).toBe(200)
-  const body = res.body as { modules: unknown[]; source: string }
+  const body = res.body as { modules: unknown[]; source: string; builtAt: string }
   expect(body.source).toBe('live')
   expect(body.modules).toHaveLength(7)
+  expect(body.builtAt).toBe('2026-06-18T00:00:00Z')
+  expect(readLatest).toHaveBeenCalledTimes(1)
   expect(res.headers['Cache-Control']).toContain('no-store')
   expect(res.headers['Cache-Control']).not.toContain('s-maxage')
 })

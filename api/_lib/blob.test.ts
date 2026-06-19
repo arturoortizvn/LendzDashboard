@@ -24,6 +24,7 @@ test('readLatest returns null when BLOB_READ_WRITE_TOKEN is not set', async () =
   const p = await readLatest(fetchImpl as unknown as typeof fetch)
   expect(p).toBeNull()
   expect(fetchImpl).not.toHaveBeenCalled()
+  expect(head).not.toHaveBeenCalled()
 })
 
 test('readLatest fetches the blob with the read-write token and parses it', async () => {

@@ -18,3 +18,13 @@ test('throws on a non-ok response', async () => {
   vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 500 }))
   await expect(fetchReadiness(async () => 'tok')).rejects.toThrow(/500/)
 })
+
+test('omits the Authorization header when no token is available', async () => {
+  const fetchSpy = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ asOf: 'x', modules: [] }) })
+  vi.stubGlobal('fetch', fetchSpy)
+  await fetchReadiness(async () => null)
+  expect(fetchSpy).toHaveBeenCalledWith(
+    '/api/readiness',
+    expect.not.objectContaining({ headers: expect.objectContaining({ Authorization: expect.anything() }) }),
+  )
+})

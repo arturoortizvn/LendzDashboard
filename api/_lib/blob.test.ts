@@ -4,7 +4,10 @@ import { readLatest, writeLatest } from './blob'
 
 vi.mock('@vercel/blob', () => ({ put: vi.fn(), head: vi.fn() }))
 
-afterEach(() => vi.clearAllMocks())
+afterEach(() => {
+  vi.clearAllMocks()
+  delete process.env.BLOB_READ_WRITE_TOKEN
+})
 
 test('writeLatest stores a private object at the fixed path with overwrite enabled', async () => {
   const payload = { asOf: 'x', modules: [], source: 'live' as const }
@@ -14,6 +17,13 @@ test('writeLatest stores a private object at the fixed path with overwrite enabl
     JSON.stringify(payload),
     expect.objectContaining({ access: 'private', contentType: 'application/json', addRandomSuffix: false, allowOverwrite: true }),
   )
+})
+
+test('readLatest returns null when BLOB_READ_WRITE_TOKEN is not set', async () => {
+  const fetchImpl = vi.fn()
+  const p = await readLatest(fetchImpl as unknown as typeof fetch)
+  expect(p).toBeNull()
+  expect(fetchImpl).not.toHaveBeenCalled()
 })
 
 test('readLatest fetches the blob with the read-write token and parses it', async () => {

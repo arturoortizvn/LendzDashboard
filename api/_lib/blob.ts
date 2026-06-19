@@ -14,10 +14,12 @@ export async function writeLatest(payload: ReadinessPayload): Promise<void> {
 
 export async function readLatest(fetchImpl: typeof fetch = fetch): Promise<ReadinessPayload | null> {
   try {
+    const token = process.env.BLOB_READ_WRITE_TOKEN
+    if (!token) return null
     const meta = await head(BLOB_PATH)
     const res = await fetchImpl(meta.url, {
       cache: 'no-store',
-      headers: { Authorization: `Bearer ${process.env.BLOB_READ_WRITE_TOKEN}` },
+      headers: { Authorization: `Bearer ${token}` },
     })
     if (!res.ok) return null
     return (await res.json()) as ReadinessPayload

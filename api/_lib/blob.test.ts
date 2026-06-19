@@ -1,8 +1,10 @@
 import { afterEach, expect, test, vi } from 'vitest'
-import { head, put } from '@vercel/blob'
+import { get, put } from '@vercel/blob'
 import { readLatest, writeLatest } from './blob'
 
-vi.mock('@vercel/blob', () => ({ put: vi.fn(), head: vi.fn() }))
+vi.mock('@vercel/blob', () => ({ put: vi.fn(), get: vi.fn() }))
+
+const streamOf = (value: unknown) => new Response(JSON.stringify(value)).body
 
 afterEach(() => {
   vi.clearAllMocks()
@@ -20,34 +22,29 @@ test('writeLatest stores a private object at the fixed path with overwrite enabl
 })
 
 test('readLatest returns null when BLOB_READ_WRITE_TOKEN is not set', async () => {
-  const fetchImpl = vi.fn()
-  const p = await readLatest(fetchImpl as unknown as typeof fetch)
+  const p = await readLatest()
   expect(p).toBeNull()
-  expect(fetchImpl).not.toHaveBeenCalled()
-  expect(head).not.toHaveBeenCalled()
+  expect(get).not.toHaveBeenCalled()
 })
 
-test('readLatest fetches the blob with the read-write token and parses it', async () => {
+test('readLatest reads the private blob by pathname and parses it', async () => {
   process.env.BLOB_READ_WRITE_TOKEN = 'blob_tok'
-  vi.mocked(head).mockResolvedValue({ url: 'https://blob/readiness/latest.json' } as never)
-  const fetchImpl = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ asOf: 'y', modules: [] }) })
-  const p = await readLatest(fetchImpl as unknown as typeof fetch)
+  vi.mocked(get).mockResolvedValue({ stream: streamOf({ asOf: 'y', modules: [] }) } as never)
+  const p = await readLatest()
   expect(p).toEqual({ asOf: 'y', modules: [] })
-  expect(fetchImpl).toHaveBeenCalledWith(
-    'https://blob/readiness/latest.json',
-    expect.objectContaining({ headers: { Authorization: 'Bearer blob_tok' } }),
-  )
+  expect(get).toHaveBeenCalledWith('readiness/latest.json', expect.objectContaining({ access: 'private' }))
 })
 
 test('readLatest returns null when the blob is missing', async () => {
-  vi.mocked(head).mockRejectedValue(new Error('BlobNotFound'))
+  process.env.BLOB_READ_WRITE_TOKEN = 'blob_tok'
+  vi.mocked(get).mockResolvedValue(null)
   const p = await readLatest()
   expect(p).toBeNull()
 })
 
-test('readLatest returns null when fetch returns a non-ok response', async () => {
-  vi.mocked(head).mockResolvedValue({ url: 'https://blob/readiness/latest.json' } as never)
-  const fetchImpl = vi.fn().mockResolvedValue({ ok: false, status: 404, json: () => Promise.resolve(null) })
-  const p = await readLatest(fetchImpl as unknown as typeof fetch)
+test('readLatest returns null when get throws', async () => {
+  process.env.BLOB_READ_WRITE_TOKEN = 'blob_tok'
+  vi.mocked(get).mockRejectedValue(new Error('BlobServiceNotAvailable'))
+  const p = await readLatest()
   expect(p).toBeNull()
 })

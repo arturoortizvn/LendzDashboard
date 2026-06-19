@@ -1,4 +1,4 @@
-import { head, put } from '@vercel/blob'
+import { get, put } from '@vercel/blob'
 import type { ReadinessPayload } from '../../shared/readiness.js'
 
 const BLOB_PATH = 'readiness/latest.json'
@@ -12,17 +12,12 @@ export async function writeLatest(payload: ReadinessPayload): Promise<void> {
   })
 }
 
-export async function readLatest(fetchImpl: typeof fetch = fetch): Promise<ReadinessPayload | null> {
+export async function readLatest(): Promise<ReadinessPayload | null> {
   try {
-    const token = process.env.BLOB_READ_WRITE_TOKEN
-    if (!token) return null
-    const meta = await head(BLOB_PATH)
-    const res = await fetchImpl(meta.url, {
-      cache: 'no-store',
-      headers: { Authorization: `Bearer ${token}` },
-    })
-    if (!res.ok) return null
-    return (await res.json()) as ReadinessPayload
+    if (!process.env.BLOB_READ_WRITE_TOKEN) return null
+    const result = await get(BLOB_PATH, { access: 'private', useCache: false })
+    if (!result?.stream) return null
+    return (await new Response(result.stream).json()) as ReadinessPayload
   } catch {
     return null
   }

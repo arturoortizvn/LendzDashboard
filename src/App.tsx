@@ -1,17 +1,10 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '@clerk/clerk-react'
-import type { Module, ReadinessPayload } from '../shared/readiness'
+import type { ReadinessPayload } from '../shared/readiness'
 import { fetchReadiness } from './api'
 import { Masthead } from './components/Masthead'
 import { Tabs } from './components/Tabs'
 import { DeliveryPanel } from './components/DeliveryPanel'
-import { MeasurementPanel } from './components/MeasurementPanel'
-
-function renderPanel(m: Module) {
-  return m.phase === 'measurement'
-    ? <MeasurementPanel module={m} />
-    : <DeliveryPanel module={m} />
-}
 
 export default function App() {
   const { getToken } = useAuth()
@@ -44,7 +37,7 @@ export default function App() {
     <div className="wrap">
       <Masthead asOf={payload.asOf} />
       <Tabs modules={payload.modules} activeKey={activeKey} onSelect={setActiveKey} />
-      {renderPanel(active)}
+      <DeliveryPanel module={active} />
     </div>
   )
 }

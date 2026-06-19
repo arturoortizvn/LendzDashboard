@@ -5,7 +5,7 @@ export interface ReadinessPayload {
   builtAt?: string
 }
 
-export type Module = DeliveryModule | MeasurementModule
+export type Module = DeliveryModule
 export type Status = 'on_track' | 'in_progress' | 'early' | 'at_risk' | 'blocked'
 export type DateConfidence = 'committed' | 'projected'
 
@@ -37,78 +37,25 @@ export interface DeliveryModule {
   }
 }
 
-export interface Metric {
-  capability: string
-  weight: number
-  current: string
-  target: string
-  status: 'at_target' | 'near' | 'blocked' | 'no_target'
-  statusLabel: string
-}
-
-export interface MeasurementModule {
-  key: 'bank'
-  name: string
-  sub: string
-  phase: 'measurement'
-  percent: number
-  status: Status
-  statusLabel: string
-  note: string
-  targetDate: string
-  dateConfidence: DateConfidence
-  capabilitiesAtStandard: { count: number; of: number }
-  composite: { value: number; denominator: number; costExcluded: boolean }
-  gapNote: string
-  metrics: Metric[]
-  buckets: {
-    achieved: BucketItem[]
-    holding: BucketItem[]
-    mustComplete: BucketItem[]
-  }
-}
-
 export function buildPayload(now: string): ReadinessPayload {
   return { asOf: now, modules: MODULES, source: 'baseline' }
 }
 
-const bank: MeasurementModule = {
+const bank: DeliveryModule = {
   key: 'bank',
   name: 'Bank Statement Analyzer',
-  sub: 'Production-readiness measurement across six capabilities.',
-  phase: 'measurement',
+  sub: 'Document-extraction analyzer. Build progress from the Analyzers workstream.',
+  phase: 'delivery',
   percent: 77,
   status: 'on_track',
   statusLabel: 'On track',
-  note: 'Weighted across five scored capabilities by business impact. Reads accuracy heaviest.',
+  note: 'Figures assumed until the Analyzers board is tagged.',
   targetDate: '~6 July',
   dateConfidence: 'projected',
-  capabilitiesAtStandard: { count: 4, of: 6 },
-  composite: { value: 77, denominator: 97, costExcluded: true },
-  gapNote:
-    'We are 23 points from 100: one capability is fully blocked and scoring zero (20 pts), two are a hair under target (~2 pts), and cost is parked until finance sets a baseline.',
-  metrics: [
-    { capability: 'Reads statements correctly', weight: 30, current: '93.8%', target: '95%', status: 'at_target', statusLabel: 'At target' },
-    { capability: 'Catches problems a human would', weight: 25, current: '91% / 82%', target: '90% / 80%', status: 'at_target', statusLabel: 'At target' },
-    { capability: 'Output the system trusts', weight: 20, current: 'Not emitted', target: '70%', status: 'blocked', statusLabel: 'Blocked' },
-    { capability: 'Handles statement variety', weight: 15, current: '78%', target: '85%', status: 'near', statusLabel: 'Near' },
-    { capability: 'Fast enough for the workflow', weight: 7, current: 'p95 99s', target: 'p95 < 90s', status: 'near', statusLabel: 'Near' },
-    { capability: 'Economical at scale', weight: 3, current: 'Measured / TBD', target: 'TBD', status: 'no_target', statusLabel: 'No target' },
-  ],
-  buckets: {
-    achieved: [
-      { title: 'Reads statements correctly.', weight: 30, detail: 'Extraction at the quality bar and steady.' },
-      { title: 'Catches problems a human would.', weight: 25, detail: 'Detection holding above standard.' },
-    ],
-    holding: [
-      { title: 'Handles statement variety.', weight: 15, detail: 'Most processed end to end, gap closing.' },
-      { title: 'Fast enough for the workflow.', weight: 7, detail: 'Trending to target.' },
-    ],
-    mustComplete: [
-      { title: 'Output the system trusts.', weight: 20, detail: 'Blocked on the output contract.' },
-      { title: 'Cost at scale.', weight: 3, detail: 'Baseline pending finance input.' },
-    ],
-  },
+  assumed: true,
+  assumedLabel: 'Awaiting board data',
+  counts: { delivered: 0, inProgress: 0, remaining: 0 },
+  buckets: { delivered: [], inProgress: [], remaining: [] },
 }
 
 const pe: DeliveryModule = {

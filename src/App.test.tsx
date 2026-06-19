@@ -20,7 +20,7 @@ test('renders the first module after load and switches tabs', async () => {
   // 2 = the active tab button plus the rendered panel's mtitle
   await waitFor(() => expect(screen.getAllByText('Pricing & Eligibility')).toHaveLength(2))
   await userEvent.click(screen.getByRole('tab', { name: /Bank Statement Analyzer/ }))
-  expect(screen.getByText('Capabilities at standard')).toBeInTheDocument()
+  await waitFor(() => expect(screen.getAllByText('Bank Statement Analyzer')).toHaveLength(2))
 })
 
 test('shows an error card when the fetch fails', async () => {

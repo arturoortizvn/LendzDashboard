@@ -18,18 +18,18 @@ Phase 2B therefore:
 ## 2. Scope
 
 **Phase 2B (this spec):**
-- Fetch items from the Analyzers board (`18403908550`) and roll them up into `bank`, `id`, `tax` by a new **"Module"** mapping column (labels `Bank`/`ID`/`Tax`/`Shared`).
-- `Shared` items count toward all three analyzer modules; unlabeled items are excluded.
+- Fetch items from the Analyzers board (`18403908550`) and roll them up into `bank`, `id`, `tax` by a new **"Module"** mapping column (labels `Bank`/`ID`/`Tax` — no `Shared`).
+- Each item maps to exactly one analyzer module; unlabeled items are excluded.
 - Derive **live** per analyzer module: `counts`, `percent`, `status`/`statusLabel`, `note`, `buckets` (task titles grouped by status) — exactly as Phase 2a does for delivery modules.
+- `bank`/`id`/`tax` go **live** (no longer `FORCE_ASSUMED`); the Module column is created and populated 2026-06-19, so the modules show their real (initially low) percentages.
 - Convert `bank` from `MeasurementModule` to `DeliveryModule`; keep module order `[pe, vt, uw, lexi, bank, id, tax]`.
 - Remove the dead measurement code (types, components, fixture, tests).
 - Drop the Metrics board as a source: remove the `ID_MONDAY_METRICS` env var and its `.env.example` entry.
-- Keep `bank`/`id`/`tax` **wiring-ready but `assumed`** (agreed baselines + badge) until the Analyzers board's Module column exists, is populated, and work has started.
 - Vitest coverage on the analyzer rollup, the generalized connector, and the two-board refresh. Existing suite stays green (minus the intentionally removed measurement tests).
 
 **Out of scope:**
 - The "Bank Analyzer - Dashboard Metrics" board (`18418407276`) and its real KPI values.
-- Surfacing the shared analyzer-platform progress (API Intake, Worker, DevOps, etc.) as its own console element. Shared items only contribute to the three analyzer modules.
+- Surfacing the shared analyzer-platform progress (API Intake, Worker, DevOps, etc.) as its own console element. Shared infrastructure items are tagged per analyzer (or left empty) by the team; there is no console-level platform aggregate.
 
 **Non-goals:** no writes to Monday, no webhooks/realtime, no UI redesign, no new cron/Blob infra, no change to the request path.
 
@@ -41,12 +41,12 @@ Board `18403908550` "Workstream: Analyzers" (workspace LendLogic, creator Carlos
 - **No analyzer/module dimension today.** Items are grouped by 9 engineering phases (Discovery, API Intake, Queue, Worker, AI Classification, Security, Observability, DevOps, Testing). The per-analyzer line items live only in group 5 "AI Classification & Analyzer Layer": `Implement ID Document Analyzer`, `Implement Bank Statement Analyzer`, `Implement Tax Document Analyzer` (+ `Credit Report Analyzer`, not a console module). Everything else is shared infrastructure.
 - There is a free-text `Tags` column (e.g. `ai,bank-statement`) but it is unreliable for mapping (mostly generic tags); rejected for the same reason Phase 2a rejected prefixes.
 
-**Consequence:** like Phase 2a, the mapping must be established by a **new dedicated column** the team populates — not by parsing groups or tags. Until that column exists and is populated, every analyzer module reads empty → stays `assumed` → the dashboard renders like today.
+**Consequence:** like Phase 2a, the mapping must be established by a **new dedicated column** the team populates — not by parsing groups or tags. The column is created and the items tagged 2026-06-19, so the analyzer modules go live this cycle. A module that happens to have zero tagged items falls back to its baseline (zero-coverage guard, §6) rather than dividing by zero.
 
 ## 4. Decisions (brainstorming)
 
 1. **Source:** the Analyzers board is the **sole** source for `bank`/`id`/`tax`. The Metrics board is dropped.
-2. **Mapping mechanism:** a new single-select **status "Module"** column on the Analyzers board, labels `Bank`/`ID`/`Tax`/`Shared`, referenced by env var (`MONDAY_ANALYZER_COLUMN_ID`). One label per item; `Shared` → counts for all three; empty → excluded. Reuses the Phase 2a mechanism.
+2. **Mapping mechanism:** a new single-select **status "Module"** column on the Analyzers board, labels `Bank`/`ID`/`Tax` (no `Shared`), referenced by env var (`MONDAY_ANALYZER_COLUMN_ID`). Exactly one label per item; empty → excluded. Reuses the Phase 2a mechanism.
 3. **Shape:** `bank` becomes a `DeliveryModule` (renders with `DeliveryPanel`); measurement panel/types removed.
 4. **Status → bucket (consistent with Phase 2a, Stuck = remaining):**
 
@@ -56,7 +56,7 @@ Board `18403908550` "Workstream: Analyzers" (workspace LendLogic, creator Carlos
    | Working on it | inProgress |
    | Stuck, Not Started, (blank) | remaining |
 
-5. **`assumed` policy:** `bank`/`id`/`tax` stay `FORCE_ASSUMED` (agreed baselines + badge) until the board is ready. Turning a module live is then a one-line config change (remove it from `FORCE_ASSUMED`) once it has tagged, started stories. `vt` stays force-assumed (still from the Stories board).
+5. **`assumed` policy:** `bank`/`id`/`tax` are **removed from `FORCE_ASSUMED`** — they compute live from the (now populated) board, showing their real percentages even when low. The only remaining `assumed` path is the defensive zero-coverage guard: a module with no tagged items renders its baseline (badged) instead of dividing by zero. `vt` stays `FORCE_ASSUMED` (still sourced from the Stories board, unchanged this phase).
 6. **Architecture split:** Stories board → `pe`/`vt`/`uw`/`lexi`; Analyzers board → `bank`/`id`/`tax`.
 
 ## 5. Connector changes (`api/_lib/monday.ts`)
@@ -68,16 +68,16 @@ Board `18403908550` "Workstream: Analyzers" (workspace LendLogic, creator Carlos
 
 Two call sites:
 - Stories board (unchanged behavior): `{ boardId: getBoardId(), moduleColumnId: getModuleColumnId() }` (defaults `statusColumnId` to `task_status`).
-- Analyzers board: `{ boardId: getAnalyzerBoardId(), statusColumnId: 'status', moduleColumnId: getAnalyzerColumnId() }` — `getAnalyzerColumnId()` is `''` until the column exists, so `module` is null and all analyzer modules stay assumed.
+- Analyzers board: `{ boardId: getAnalyzerBoardId(), statusColumnId: 'status', moduleColumnId: getAnalyzerColumnId() }`. Once `MONDAY_ANALYZER_COLUMN_ID` is set, `module` carries the `Bank`/`ID`/`Tax` label; if the env var is still unset at deploy time, `module` is null and the modules degrade to the zero-coverage baseline until it is set.
 
 Cursor pagination and error propagation are reused; 79 items fit in one page (limit 100).
 
 ## 6. Rollup changes (`api/_lib/rollup.ts`)
 
 - Add `buildAnalyzerModules(stories: RawStory[]): Record<'bank'|'id'|'tax', DeliveryModule>`:
-  1. Group stories by Module label via `moduleKeyForLabel` (extended for `Bank`/`ID`/`Tax`/`Shared`). A `Shared` story is appended to **all three** module buckets; `Bank`/`ID`/`Tax` to that one; unmapped excluded.
+  1. Group stories by Module label via `moduleKeyForLabel` (extended for `Bank → bank`, `ID → id`, `Tax → tax`). Each story maps to one module; unmapped excluded.
   2. For each of `bank`/`id`/`tax`, run the same per-module rollup as `buildDeliveryModule` (bucket by status, `counts`, `percent = round(delivered/total*100)`, `status`/`statusLabel`, templated `note`, `buckets` of cleaned titles).
-  3. `FORCE_ASSUMED` or empty (`total === 0`) → return the baseline config with `assumed: true`.
+  3. Zero-coverage guard: empty (`total === 0`) → return the baseline config with `assumed: true` (avoids divide-by-zero). `bank`/`id`/`tax` are **not** in `FORCE_ASSUMED`, so any module with tagged items computes live.
 - Refactor the shared per-module rollup body out of `buildDeliveryModule` so both the Stories and Analyzers paths reuse it (avoid duplication).
 - `assembleLivePayload(storyStories, analyzerStories, now)`: build `pe`/`vt`/`uw`/`lexi` from `storyStories` (Stories board) and `bank`/`id`/`tax` from `analyzerStories` (Analyzers board); assemble in order `[pe, vt, uw, lexi, bank, id, tax]`; `source: 'live'`, `builtAt: now`.
 
@@ -96,10 +96,10 @@ Cursor pagination and error propagation are reused; 79 items fit in one page (li
 ## 9. Config changes (`api/_lib/config.ts`)
 
 - Add `ANALYZER_BOARD_ID = 18403908550` and `getAnalyzerBoardId()` reading `ID_MONDAY_ANALYZERS` (already set in Vercel Prod+Preview) with that fallback.
-- Add `getAnalyzerColumnId()` reading `MONDAY_ANALYZER_COLUMN_ID` (default `''` — column not created yet).
+- Add `getAnalyzerColumnId()` reading `MONDAY_ANALYZER_COLUMN_ID` (default `''`; set once the column exists).
 - Extend `STATUS_BUCKET` with the Analyzers board labels: `'Working on it' → inProgress`, `'Not Started' → remaining` (`Done`/`Stuck` already mapped).
-- Extend `MODULE_LABELS`/`moduleKeyForLabel` with `Bank → bank`, `ID → id`, `Tax → tax`, and a `Shared` sentinel handled by the rollup (fan-out to all three).
-- `DELIVERY_KEYS` / module grouping: `pe`/`vt`/`uw`/`lexi` resolve from the Stories board; `bank`/`id`/`tax` from the Analyzers board. `FORCE_ASSUMED` = `{ vt, bank, id, tax }` initially.
+- Extend `MODULE_LABELS`/`moduleKeyForLabel` with `Bank → bank`, `ID → id`, `Tax → tax`.
+- `DELIVERY_KEYS` / module grouping: `pe`/`vt`/`uw`/`lexi` resolve from the Stories board; `bank`/`id`/`tax` from the Analyzers board. `FORCE_ASSUMED` = `{ vt }` (bank/id/tax dropped — they go live).
 
 ## 10. Data flow
 
@@ -117,7 +117,7 @@ If **either** fetch throws → 500 and the Blob is **not** overwritten (last-kno
 
 Vitest. The implementer writes and runs the tests.
 
-- `rollup.test.ts`: `buildAnalyzerModules` — `Bank`/`ID`/`Tax` routing, `Shared` fan-out to all three, unmapped exclusion; status→bucket for `Done`/`Working on it`/`Stuck`/`Not Started`; counts/percent; `FORCE_ASSUMED` and `total === 0` → assumed baseline. A realistic Analyzers-board fixture (captured via MCP, incl. a `Shared` item and the two null leftovers) drives it.
+- `rollup.test.ts`: `buildAnalyzerModules` — `Bank`/`ID`/`Tax` routing, unmapped exclusion; status→bucket for `Done`/`Working on it`/`Stuck`/`Not Started`; counts/percent for a module with tagged items (live, not assumed); `total === 0` → zero-coverage baseline. A realistic Analyzers-board fixture (captured via MCP, incl. the two null leftovers) drives it.
 - `monday.test.ts`: `fetchBoardStories` with `statusColumnId: 'status'` and empty `moduleColumnId` → `module` null; default path still requests `task_status` + module column.
 - `refresh.test.ts`: two-board fetch assembles analyzers; an Analyzers-board fetch failure does **not** overwrite the Blob and returns non-200.
 - `readiness.test.ts`: `bank`/`id`/`tax` present as delivery modules in live and baseline payloads.
@@ -126,21 +126,21 @@ Vitest. The implementer writes and runs the tests.
 ## 12. Security / deploy / env
 
 - `ID_MONDAY_ANALYZERS` (board id) already set in Vercel (Prod + Preview) and documented in `.env.example`.
-- `MONDAY_ANALYZER_COLUMN_ID` is a new env var, **unset for now** (code defaults to `''`); the team sets it once the Module column exists. Document it in `.env.example`.
+- `MONDAY_ANALYZER_COLUMN_ID` is a new env var set to the Module column id once the column is created (2026-06-19); code defaults to `''` so a not-yet-set deploy degrades gracefully. Document it in `.env.example` and set it in Vercel (Prod + Preview).
 - **Remove** `ID_MONDAY_METRICS` from Vercel (Prod + Preview) and from `.env.example` — no longer a source.
 - The Monday token stays server-side only, used solely on the cron path. No new Blob/cron infra. `api/_lib/*.test.ts` stay in `.vercelignore`; ESM imports under `api/` keep `.js` extensions.
 - Pre-merge: `git ls-files | grep -E '^\.env'` must be empty.
 
 ## 13. Team handoff (gates live numbers, not the code)
 
-Ships with the implementation, to Carlos's team:
-- Add a single-select **status column titled "Module"** to board `18403908550` with labels exactly: `Bank`, `ID`, `Tax`, `Shared`.
-- Tag each item: analyzer-specific work → `Bank`/`ID`/`Tax`; shared infrastructure that serves all analyzers → `Shared`; out-of-console work (e.g. Credit Report) → leave empty.
-- Send the column id to set `MONDAY_ANALYZER_COLUMN_ID`. Until then the modules stay at their agreed baselines, badged, exactly like today.
+Done by the team 2026-06-19 (in parallel with the implementation):
+- Add a single-select **status column titled "Module"** to board `18403908550` with labels exactly: `Bank`, `ID`, `Tax`.
+- Tag every item with the analyzer it serves (`Bank`/`ID`/`Tax`); out-of-console work (e.g. Credit Report) → leave empty. Shared-infrastructure items are attributed to a specific analyzer by the team (no `Shared` label).
+- Send the column id so `MONDAY_ANALYZER_COLUMN_ID` is set in Vercel; the next cron rebuild turns the three modules live.
 
 ## 14. Open items and risks
 
-- **Everything is `Not Started`:** once tagged, a module computes to a low/zero percent. `FORCE_ASSUMED` keeps `bank`/`id`/`tax` at agreed baselines + badge until each is explicitly flipped live — avoids a premature 0%. The flip is a deliberate per-module config edit.
-- **`Shared` granularity:** the single-select column can't express "serves Bank+ID but not Tax." Accepted — shared infrastructure is shared by all three. If finer attribution is ever needed, the column can become a multi-select dropdown (connector change only).
-- **`bank` baseline semantics:** as a delivery module its baseline `percent` (77) is editorial continuity, not a measured KPI. Confirm the baseline number/copy during spec review.
-- **Analyzer-platform progress not surfaced:** shared-infra build progress isn't shown as its own element; only folded into the three modules. A later phase could add a platform view if stakeholders want it.
+- **Low percentages on launch:** the board starts mostly `Not Started`, so `bank`/`id`/`tax` will show low (possibly 0%) percentages — this is intended and honest, the modules are live. They rise as the team moves items to `Working on it`/`Done`. (Stakeholders accepted dropping the assumed baselines.)
+- **`bank` baseline semantics:** the `bank` delivery baseline `percent` (77) now only renders via the zero-coverage guard (no tagged items). With the column populated today it won't show; confirm the baseline number/copy during spec review anyway.
+- **Shared-infrastructure attribution:** with no `Shared` label, the team assigns each shared item to one analyzer. If an item genuinely serves all three, its progress only counts toward whichever module it's tagged — a known simplification. A multi-select column is a later option if needed.
+- **Timing coupling:** live numbers depend on the team finishing the column + tagging and on `MONDAY_ANALYZER_COLUMN_ID` being set. If the deploy lands before the env var is set, the modules show the zero-coverage baseline until it is — no breakage.

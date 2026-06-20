@@ -102,9 +102,9 @@ Spec: `docs/superpowers/specs/2026-06-19-phase2b-analyzers-connector-design.md` 
 
 **Env (Vercel):** `ID_MONDAY_ANALYZERS` + `MONDAY_ANALYZER_COLUMN_ID` set in Prod+Preview; `ID_MONDAY_METRICS` removed.
 
-**OPEN:**
-1. **Redeploy to activate `MONDAY_ANALYZER_COLUMN_ID`** — the var was set ~5 min after the last prod deploy (deploy 58m ago, var 53m ago, per audit), so the running deployment still serves the bank/id/tax zero-coverage baselines (no breakage). A redeploy makes the analyzer numbers live.
-2. **Remove `vt` from `FORCE_ASSUMED`** once Verified Truth stories are tracked on a delivered board (pending authorization + confirming VT exists on the handed-over boards).
+**OPEN — both resolved 2026-06-19:**
+1. **Redeploy to activate `MONDAY_ANALYZER_COLUMN_ID`** — DONE: redeployed (`vercel --prod`); bank/id/tax compute live on the next cron rebuild (not directly re-verified — `/api/readiness` is auth-gated and `CRON_SECRET` is cron-only).
+2. **Remove `vt` from `FORCE_ASSUMED`** — DONE: `FORCE_ASSUMED` is now empty, so Verified Truth computes live like every other module. Its 4 Stories-board tickets (Module `color_mm4e3r3v` = `Verified Truth`) are all not-started, so vt reads ~0% (Early build) until they progress.
 
 ---
 

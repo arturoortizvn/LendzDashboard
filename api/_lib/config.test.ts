@@ -55,8 +55,8 @@ test('DELIVERY_KEYS are the Stories-board modules', () => {
   expect(DELIVERY_KEYS).toEqual(['pe', 'vt', 'uw', 'lexi'])
 })
 
-test('FORCE_ASSUMED holds vt only', () => {
-  expect([...FORCE_ASSUMED]).toEqual(['vt'])
+test('FORCE_ASSUMED is empty — no modules are force-assumed', () => {
+  expect([...FORCE_ASSUMED]).toEqual([])
 })
 
 test('getBoardId returns BOARD_ID for 0, invalid, or unset; returns parsed number for valid ids', () => {

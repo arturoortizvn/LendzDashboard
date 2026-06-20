@@ -97,15 +97,14 @@ test('zero-stories assumed: module without base assumedLabel gets fallback label
   expect(tax.assumedLabel).toBe('Scaffolding done')
 })
 
-test('force-assumed modules stay assumed at baseline even with delivered stories', () => {
-  const base = MODULES_BY_KEY['vt']
+test('vt computes live from its stories (no longer force-assumed)', () => {
   const m = buildDeliveryModule('vt', [
     { name: 'VT-01-01 · spine', status: 'Done', module: 'Verified Truth' },
-    { name: 'VT-01-04 · recalc', status: 'Done', module: 'Verified Truth' },
+    { name: 'VT-01-04 · recalc', status: 'Ready to start', module: 'Verified Truth' },
   ])
-  expect(m.assumed).toBe(true)
-  expect(m.percent).toBe(base.percent)
-  expect(m.assumedLabel).toBe((base as typeof m).assumedLabel)
+  expect(m.assumed).toBe(false)
+  expect(m.counts).toEqual({ delivered: 1, inProgress: 0, remaining: 1 })
+  expect(m.percent).toBe(50)
 })
 
 test('assembleLivePayload routes a real Module label to its delivery module', () => {

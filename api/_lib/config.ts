@@ -19,7 +19,7 @@ export const DELIVERY_KEYS: readonly ModuleKey[] = ['pe', 'vt', 'uw', 'lexi']
 
 export const ANALYZER_KEYS: readonly ModuleKey[] = ['bank', 'id', 'tax']
 
-export const FORCE_ASSUMED: ReadonlySet<ModuleKey> = new Set<ModuleKey>(['vt'])
+export const FORCE_ASSUMED: ReadonlySet<ModuleKey> = new Set<ModuleKey>()
 
 export type Bucket = 'delivered' | 'inProgress' | 'remaining'
 

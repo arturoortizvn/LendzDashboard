@@ -74,6 +74,40 @@ Spec: `docs/superpowers/specs/2026-06-18-phase2-monday-connector-design.md` · P
 
 **Refs at close:** `main` = `origin/main` = `671175a` (= what's deployed in production); `develop` = `origin/develop` = `f3fca0e` (release + review follow-up cleanups, not yet deployed — reach main/prod on the next deploy).
 
+**OPEN (resolved since close):**
+1. **Rotate `MONDAY_API_TOKEN`** — DONE 2026-06-19 (rotated). ⚠️ confirm the new value is the one set in Vercel and that a redeploy carried it — the cron `/api/refresh` reads it.
+2. **Bank Analyzer from the metrics DB** — DESCOPED: it tracks the product's data source, not dashboard build work; the interim Analyzers-board approach shipped instead (Phase 2B below). Roadmap: memory `readiness-data-source-roadmap`.
+
+---
+
+# PHASE 3 — Clerk invite-only access control — CLOSED 2026-06-19
+
+Spec: `docs/superpowers/specs/2026-06-18-phase3-auth-design.md` · Plan: `docs/superpowers/plans/2026-06-18-phase3-auth.md` · Commits `43f07d9..20543b1` (feature branch merged & deleted).
+
+**DEPLOYED & LIVE in production:** https://lendz-dashboard.vercel.app — verified `GET /api/readiness` → `401 unauthorized` without a Bearer token (the gate is live).
+
+**Scope:** locked the dashboard behind invite-only Clerk auth. `/api/readiness` verifies the Clerk session token (`@clerk/backend` `verifyToken`, `api/_lib/auth.ts`); the SPA is wrapped in the Clerk provider + an invite-only AuthGate and sends the token on every fetch. The readiness Blob is stored privately and read with the token. The API checks the token's authorized party (`azp`) against an origin allowlist (`CLERK_AUTHORIZED_PARTIES`), with the deployment's own origins always allowed.
+
+**Env (Vercel):** `CLERK_SECRET_KEY` (Prod+Preview), `VITE_CLERK_PUBLISHABLE_KEY` (Prod+Preview, public by design), `CLERK_AUTHORIZED_PARTIES` (Production only — empty disables the allowlist, so it is OFF in Preview).
+
+---
+
+# PHASE 2B — Analyzer modules live from the Analyzers board — CLOSED 2026-06-19
+
+Spec: `docs/superpowers/specs/2026-06-19-phase2b-analyzers-connector-design.md` · Plan: `docs/superpowers/plans/2026-06-19-phase2b-analyzers-connector.md` · Commits `957c555..9d95f0b` (feature branch merged & deleted).
+
+**Scope:** wired `bank`/`id`/`tax` to live data from the "Workstream: Analyzers" board (`18403908550`) via a single-select **"Module"** status column (`color_mm4f6wz7`, labels `Bank`/`ID`/`Tax`/`Shared`/`-`), behind the unchanged `GET /api/readiness` contract. Converted `bank` from a measurement module to a delivery module (removed `Metric`/`MeasurementModule`/`MeasurementPanel`/`MetricsTable`). Generalized `fetchBoardStories` with `statusColumnId` + optional `moduleColumnId`; the cron now fetches both boards (Stories + Analyzers) and assembles one payload. The `Shared` label counts toward bank/id/tax.
+
+**Key decisions:** pivoted the source from the Metrics board to the Analyzers board (the original metrics-DB approach was dropped). `FORCE_ASSUMED` reduced to `{ vt }` — bank/id/tax compute live; `vt` stays force-assumed until its stories are tracked. 69/69 tests, `npm run build` green.
+
+**Env (Vercel):** `ID_MONDAY_ANALYZERS` + `MONDAY_ANALYZER_COLUMN_ID` set in Prod+Preview; `ID_MONDAY_METRICS` removed.
+
 **OPEN:**
-1. **Rotate `MONDAY_API_TOKEN`** — it appeared in plaintext in a chat transcript. Revoke in Monday → new token → re-set Prod+Preview (`vercel env rm/add --yes`) → `vercel --prod` (that redeploy also carries the `develop` cleanups to main/prod; ff `develop→main` with explicit OK).
-2. **Phase 2b** — Bank Analyzer composite from the metrics DB; blocked on DB read access + the six KPI table/columns from Javi.
+1. **Redeploy to activate `MONDAY_ANALYZER_COLUMN_ID`** — the var was set ~5 min after the last prod deploy (deploy 58m ago, var 53m ago, per audit), so the running deployment still serves the bank/id/tax zero-coverage baselines (no breakage). A redeploy makes the analyzer numbers live.
+2. **Remove `vt` from `FORCE_ASSUMED`** once Verified Truth stories are tracked on a delivered board (pending authorization + confirming VT exists on the handed-over boards).
+
+---
+
+# Build log on Monday — 2026-06-19
+
+The dashboard's dev work is mirrored in Monday board `18418615318` ("Lendz Dashboard — Build Log"): phases as items, SDD tasks as subitems, status reflecting production. Created in the **Viewnear** workspace as a fallback (no create rights in LendLogic); **pending a move to LendLogic** (`14566706`). See memory `monday-build-log-board`.

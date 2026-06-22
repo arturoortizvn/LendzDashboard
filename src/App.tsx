@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { useAuth } from '@clerk/clerk-react'
 import type { ReadinessPayload } from '../shared/readiness'
 import { fetchReadiness } from './api'
 import { Masthead } from './components/Masthead'
@@ -7,14 +6,13 @@ import { Tabs } from './components/Tabs'
 import { DeliveryPanel } from './components/DeliveryPanel'
 
 export default function App() {
-  const { getToken } = useAuth()
   const [payload, setPayload] = useState<ReadinessPayload | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [activeKey, setActiveKey] = useState<string | null>(null)
 
   useEffect(() => {
     const ctrl = new AbortController()
-    fetchReadiness(getToken, ctrl.signal)
+    fetchReadiness(ctrl.signal)
       .then((p) => {
         setPayload(p)
         setActiveKey(p.modules[0]?.key ?? null)
@@ -23,7 +21,7 @@ export default function App() {
         if (e.name !== 'AbortError') setError(e.message)
       })
     return () => ctrl.abort()
-  }, [getToken])
+  }, [])
 
   if (error) {
     return <div className="wrap"><div className="card">Could not load the console: {error}</div></div>

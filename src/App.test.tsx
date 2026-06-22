@@ -8,11 +8,6 @@ vi.mock('./api', () => ({
   fetchReadiness: vi.fn(() => Promise.resolve(buildPayload('2026-06-17T14:00:00Z'))),
 }))
 
-const mockGetToken = vi.fn().mockResolvedValue('tok')
-vi.mock('@clerk/clerk-react', () => ({
-  useAuth: () => ({ getToken: mockGetToken }),
-}))
-
 afterEach(() => vi.clearAllMocks())
 
 test('renders the first module after load and switches tabs', async () => {

@@ -111,3 +111,25 @@ Spec: `docs/superpowers/specs/2026-06-19-phase2b-analyzers-connector-design.md` 
 # Build log on Monday — 2026-06-19
 
 The dashboard's dev work is mirrored in Monday board `18418615318` ("Lendz Dashboard — Build Log"): phases as items, SDD tasks as subitems, status reflecting production. Created in the **Viewnear** workspace as a fallback (no create rights in LendLogic); **pending a move to LendLogic** (`14566706`). See memory `monday-build-log-board`.
+
+---
+
+# PHASE 3 RETIRED — Clerk auth removed — 2026-06-22
+
+Spec: `docs/superpowers/specs/2026-06-22-remove-auth-design.md` · Plan: `docs/superpowers/plans/2026-06-22-remove-auth.md` · Branch: `feature/remove-auth`.
+
+**Reason:** the dashboard exposes no private data (all figures are already visible to anyone on the project); the Clerk gate added friction and operational overhead without a meaningful security benefit.
+
+**Removed:**
+- Client gate: `ClerkProvider` / `AuthGate` wrappers in `main.tsx` and `App.tsx`.
+- `/api/readiness` token check + `401 unauthorized` response (`@clerk/backend` `verifyToken`, `api/_lib/auth.ts`).
+- npm packages `@clerk/backend` and `@clerk/clerk-react`.
+- Clerk env vars `VITE_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`, `CLERK_AUTHORIZED_PARTIES`.
+
+**Kept:** `CRON_SECRET` on `/api/refresh` (protects the write path from unsolicited rebuilds — unrelated to user auth).
+
+**History preserved:** the Phase 3 spec (`docs/superpowers/specs/2026-06-18-phase3-auth-design.md`) and plan (`docs/superpowers/plans/2026-06-18-phase3-auth.md`) are intentionally retained as historical record of the Clerk implementation.
+
+**Manual follow-ups (owner):**
+1. Remove the three Clerk env vars from Vercel (Preview + Production): `vercel env rm VITE_CLERK_PUBLISHABLE_KEY`, `vercel env rm CLERK_SECRET_KEY`, `vercel env rm CLERK_AUTHORIZED_PARTIES`.
+2. Deactivate (or delete) the Clerk application in the Clerk dashboard.

@@ -114,7 +114,7 @@ The dashboard's dev work is mirrored in Monday board `18418615318` ("Lendz Dashb
 
 ---
 
-# PHASE 3 RETIRED — Clerk auth removed — 2026-06-22
+# PHASE 3 — Clerk auth — RETIRED 2026-06-22
 
 Spec: `docs/superpowers/specs/2026-06-22-remove-auth-design.md` · Plan: `docs/superpowers/plans/2026-06-22-remove-auth.md` · Branch: `feature/remove-auth`.
 

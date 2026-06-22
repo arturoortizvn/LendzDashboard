@@ -42,4 +42,6 @@ test('falls back to the config baseline when the blob is missing', async () => {
   const body = res.body as { modules: unknown[]; source?: string }
   expect(body.modules).toHaveLength(7)
   expect(body.source).toBe('baseline')
+  expect(res.headers['Cache-Control']).toContain('public')
+  expect(res.headers['Cache-Control']).toContain('no-store')
 })

@@ -27,7 +27,7 @@ test('serves the last-known-good payload publicly, no shared cache', async () =>
   expect(res.statusCode).toBe(200)
   const body = res.body as { modules: unknown[]; source: string; builtAt: string }
   expect(body.source).toBe('live')
-  expect(body.modules).toHaveLength(7)
+  expect(body.modules).toHaveLength(9)
   expect(body.builtAt).toBe('2026-06-18T00:00:00Z')
   expect(readLatest).toHaveBeenCalledTimes(1)
   expect(res.headers['Cache-Control']).toContain('public')
@@ -40,7 +40,7 @@ test('falls back to the config baseline when the blob is missing', async () => {
   await handler({ headers: {} } as VercelRequest, res as VercelResponse)
   expect(res.statusCode).toBe(200)
   const body = res.body as { modules: unknown[]; source?: string }
-  expect(body.modules).toHaveLength(7)
+  expect(body.modules).toHaveLength(9)
   expect(body.source).toBe('baseline')
   expect(res.headers['Cache-Control']).toContain('public')
   expect(res.headers['Cache-Control']).toContain('no-store')

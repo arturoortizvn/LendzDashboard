@@ -30,8 +30,8 @@ test('paginates via cursor and maps name/status/module', async () => {
 
   expect(fetchImpl).toHaveBeenCalledTimes(2)
   expect(stories).toEqual([
-    { name: 'F-01-06 · Eligibility', status: 'Done', module: 'Pricing & Eligibility' },
-    { name: 'CLTV issue', status: 'In Progress', module: null },
+    { name: 'F-01-06 · Eligibility', status: 'Done', module: 'Pricing & Eligibility', subtasks: [] },
+    { name: 'CLTV issue', status: 'In Progress', module: null, subtasks: [] },
   ])
 })
 
@@ -77,7 +77,7 @@ test('reads a custom status column and omits the module column when absent', asy
   const sentBody = JSON.parse((fetchImpl.mock.calls[0][1] as { body: string }).body) as { query: string }
   expect(sentBody.query).toContain('ids: ["status"]')
   expect(stories).toEqual([
-    { name: 'Implement Bank Statement Analyzer', status: 'Not Started', module: null },
+    { name: 'Implement Bank Statement Analyzer', status: 'Not Started', module: null, subtasks: [] },
   ])
 })
 
@@ -96,4 +96,38 @@ test('throws when paginated response is missing next_items_page', async () => {
     token: 't', boardId: 1, moduleColumnId: 'status_module',
     fetchImpl: fetchImpl as unknown as typeof fetch,
   })).rejects.toThrow(/missing next_items_page/)
+})
+
+test('parses sub-items into subtasks with their status, unset status → empty string', async () => {
+  const page = { boards: [{ items_page: { cursor: null, items: [
+    { name: 'U-02-ID · ID Analyzer', column_values: [{ id: 'task_status', text: 'In Progress' }],
+      subitems: [
+        { name: 'U-02-ID-01: Structured extraction', column_values: [{ id: 'status', text: 'Done' }] },
+        { name: 'U-02-ID-02: Provenance linking', column_values: [{ id: 'status', text: null }] },
+      ] },
+    { name: 'Story with no sub-items', column_values: [{ id: 'task_status', text: 'Done' }], subitems: [] },
+  ] } }] }
+  const fetchImpl = vi.fn().mockResolvedValueOnce(jsonRes(page))
+
+  const stories = await fetchBoardStories({
+    token: 't', boardId: 7, statusColumnId: 'task_status',
+    fetchImpl: fetchImpl as unknown as typeof fetch,
+  })
+
+  expect(stories[0].subtasks).toEqual([
+    { name: 'U-02-ID-01: Structured extraction', status: 'Done' },
+    { name: 'U-02-ID-02: Provenance linking', status: '' },
+  ])
+  expect(stories[1].subtasks).toEqual([])
+})
+
+test('requests the subitems field with the sub-item status column', async () => {
+  const page = { boards: [{ items_page: { cursor: null, items: [] } }] }
+  const fetchImpl = vi.fn().mockResolvedValueOnce(jsonRes(page))
+  await fetchBoardStories({
+    token: 't', boardId: 7, statusColumnId: 'task_status',
+    fetchImpl: fetchImpl as unknown as typeof fetch,
+  })
+  const sentBody = JSON.parse((fetchImpl.mock.calls[0][1] as { body: string }).body) as { query: string }
+  expect(sentBody.query).toContain('subitems { name column_values(ids: ["status"])')
 })

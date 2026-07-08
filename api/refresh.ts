@@ -1,15 +1,14 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { fetchBoardStories } from './_lib/monday.js'
+import type { RawStory } from './_lib/monday.js'
 import { assembleLivePayload } from './_lib/rollup.js'
 import { writeLatest } from './_lib/blob.js'
 import {
-  getAnalyzerBoardId,
-  getAnalyzerColumnId,
-  getBoardId,
+  boardBackedKeys,
   getCronSecret,
-  getDedicatedAnalyzerBoardId,
-  getModuleColumnId,
+  getModuleBoardId,
   getMondayToken,
+  type ModuleKey,
 } from './_lib/config.js'
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -18,20 +17,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
   try {
     const token = getMondayToken()
-    const [deliveryStories, bank, id, pl, paystub, taxStories] = await Promise.all([
-      fetchBoardStories({ token, boardId: getBoardId(), moduleColumnId: getModuleColumnId() }),
-      fetchBoardStories({ token, boardId: getDedicatedAnalyzerBoardId('bank'), statusColumnId: 'task_status' }),
-      fetchBoardStories({ token, boardId: getDedicatedAnalyzerBoardId('id'), statusColumnId: 'task_status' }),
-      fetchBoardStories({ token, boardId: getDedicatedAnalyzerBoardId('pl'), statusColumnId: 'task_status' }),
-      fetchBoardStories({ token, boardId: getDedicatedAnalyzerBoardId('paystub'), statusColumnId: 'task_status' }),
-      fetchBoardStories({ token, boardId: getAnalyzerBoardId(), statusColumnId: 'status', moduleColumnId: getAnalyzerColumnId() }),
-    ])
-    const payload = assembleLivePayload(
-      deliveryStories,
-      { bank, id, pl, paystub },
-      taxStories,
-      new Date().toISOString(),
+    const keys = boardBackedKeys()
+    const results = await Promise.all(
+      keys.map((k) =>
+        fetchBoardStories({ token, boardId: getModuleBoardId(k)!, statusColumnId: 'task_status' })
+          .then((stories) => ({ k, stories: stories as RawStory[] | null }))
+          .catch(() => ({ k, stories: null as RawStory[] | null })),
+      ),
     )
+    // A single decommissioned/renamed board must not sink the whole refresh, but
+    // a total failure (bad token / Monday down) must not clobber the last-good blob.
+    if (results.every((r) => r.stories === null)) {
+      return res.status(500).json({ error: 'all Monday board fetches failed' })
+    }
+    const storiesByModule: Partial<Record<ModuleKey, RawStory[]>> = {}
+    for (const r of results) {
+      if (r.stories !== null) storiesByModule[r.k] = r.stories
+    }
+    const payload = assembleLivePayload(storiesByModule, new Date().toISOString())
     await writeLatest(payload)
     return res.status(200).json({ ok: true, modules: payload.modules.length, builtAt: payload.builtAt })
   } catch (e) {

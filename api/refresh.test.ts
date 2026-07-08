@@ -19,11 +19,10 @@ function mockRes() {
 beforeEach(() => {
   process.env.CRON_SECRET = 'secret'
   process.env.MONDAY_API_TOKEN = 'tok'
-  process.env.MONDAY_MODULE_COLUMN_ID = 'status_module'
-  process.env.ID_MONDAY = '18402839374'
-  process.env.ID_MONDAY_ANALYZERS = '18403908550'
 })
 afterEach(() => vi.clearAllMocks())
+
+const authed = { headers: { authorization: 'Bearer secret' } } as unknown as VercelRequest
 
 test('rejects requests without the cron secret', async () => {
   const res = mockRes()
@@ -33,38 +32,40 @@ test('rejects requests without the cron secret', async () => {
   expect(writeLatest).not.toHaveBeenCalled()
 })
 
-test('fetches all six boards, assembles, writes the blob, and returns 200', async () => {
-  vi.mocked(fetchBoardStories).mockResolvedValue([
-    { name: 'F-01-06 · Eligibility', status: 'Done', module: 'Pricing & Eligibility' },
-  ])
+test('fetches every board-backed board with task_status, assembles, writes, and returns 200', async () => {
+  vi.mocked(fetchBoardStories).mockResolvedValue([{ name: 'X', status: 'Done', module: null }])
   const res = mockRes()
-  await handler({ headers: { authorization: 'Bearer secret' } } as unknown as VercelRequest, res as VercelResponse)
+  await handler(authed, res as VercelResponse)
   expect(res.statusCode).toBe(200)
   expect(fetchBoardStories).toHaveBeenCalledTimes(6)
-  const boardIds = vi.mocked(fetchBoardStories).mock.calls.map((c) => c[0].boardId)
-  expect(boardIds).toEqual(
-    expect.arrayContaining([18402839374, 18420951194, 18420951197, 18420951201, 18420951200, 18403908550]),
-  )
-  expect(writeLatest).toHaveBeenCalledTimes(1)
-
   const calls = vi.mocked(fetchBoardStories).mock.calls.map((c) => c[0])
-  const byBoard = (id: number) => calls.find((c) => c.boardId === id)!
-  // dedicated analyzer boards: task_status, no module column
-  for (const id of [18420951194, 18420951197, 18420951201, 18420951200]) {
-    expect(byBoard(id).statusColumnId).toBe('task_status')
-    expect(byBoard(id).moduleColumnId).toBeUndefined()
-  }
-  // shared Tax board: status column + module column
-  expect(byBoard(18403908550).statusColumnId).toBe('status')
-  expect(byBoard(18403908550).moduleColumnId).toBeDefined()
-  // stories board: module column present
-  expect(byBoard(18402839374).moduleColumnId).toBeDefined()
+  const boardIds = calls.map((c) => c.boardId)
+  expect(boardIds).toEqual(
+    expect.arrayContaining([18420951236, 18420951193, 18420951194, 18420951197, 18420951201, 18420951200]),
+  )
+  for (const c of calls) expect(c.statusColumnId).toBe('task_status')
+  expect(writeLatest).toHaveBeenCalledTimes(1)
 })
 
-test('on a Monday failure returns 500 and does NOT overwrite the blob', async () => {
-  vi.mocked(fetchBoardStories).mockRejectedValue(new Error('Monday API HTTP 500'))
+test('one board failing still writes; that module falls back to assumed, others live', async () => {
+  vi.mocked(fetchBoardStories).mockImplementation((opts: { boardId: number }) =>
+    opts.boardId === 18420951193
+      ? Promise.reject(new Error('board gone'))
+      : Promise.resolve([{ name: 'X', status: 'Done', module: null }]),
+  )
   const res = mockRes()
-  await handler({ headers: { authorization: 'Bearer secret' } } as unknown as VercelRequest, res as VercelResponse)
+  await handler(authed, res as VercelResponse)
+  expect(res.statusCode).toBe(200)
+  expect(writeLatest).toHaveBeenCalledTimes(1)
+  const payload = vi.mocked(writeLatest).mock.calls[0][0] as { modules: Array<{ key: string; assumed: boolean }> }
+  expect(payload.modules.find((m) => m.key === 'uw')!.assumed).toBe(true)
+  expect(payload.modules.find((m) => m.key === 'pe')!.assumed).toBe(false)
+})
+
+test('all boards failing returns 500 and does NOT overwrite the blob', async () => {
+  vi.mocked(fetchBoardStories).mockRejectedValue(new Error('Monday down'))
+  const res = mockRes()
+  await handler(authed, res as VercelResponse)
   expect(res.statusCode).toBe(500)
   expect(writeLatest).not.toHaveBeenCalled()
 })

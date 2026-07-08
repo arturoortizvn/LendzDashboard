@@ -118,3 +118,10 @@
     border-radius: 5px; padding: 2px 8px; margin-left: 8px; vertical-align: 2px; text-transform: uppercase; letter-spacing: .03em; }
 
   .foot { text-align: center; font-size: 11px; color: #8FA0B5; margin-top: 22px; }
+
+  .analyzer-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 14px; margin-top: 14px; }
+  .analyzer-card { text-align: left; background: #fff; border: 1px solid #E3EAF2; border-left: 4px solid #C9D6E6; border-radius: 14px; padding: 16px 18px; cursor: pointer; font: inherit; }
+  .analyzer-card:hover { border-color: #B9CBE2; }
+  .analyzer-card .ac-name { font-size: 14px; font-weight: 600; color: #0B1F3A; margin-bottom: 8px; }
+  .analyzer-card .ac-pct { font-size: 24px; font-weight: 600; color: #0B1F3A; margin-right: 8px; }
+  .subnav { margin-top: -8px; }

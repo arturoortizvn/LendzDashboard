@@ -46,6 +46,19 @@ test('fetches all six boards, assembles, writes the blob, and returns 200', asyn
     expect.arrayContaining([18402839374, 18420951194, 18420951197, 18420951201, 18420951200, 18403908550]),
   )
   expect(writeLatest).toHaveBeenCalledTimes(1)
+
+  const calls = vi.mocked(fetchBoardStories).mock.calls.map((c) => c[0])
+  const byBoard = (id: number) => calls.find((c) => c.boardId === id)!
+  // dedicated analyzer boards: task_status, no module column
+  for (const id of [18420951194, 18420951197, 18420951201, 18420951200]) {
+    expect(byBoard(id).statusColumnId).toBe('task_status')
+    expect(byBoard(id).moduleColumnId).toBeUndefined()
+  }
+  // shared Tax board: status column + module column
+  expect(byBoard(18403908550).statusColumnId).toBe('status')
+  expect(byBoard(18403908550).moduleColumnId).toBeDefined()
+  // stories board: module column present
+  expect(byBoard(18402839374).moduleColumnId).toBeDefined()
 })
 
 test('on a Monday failure returns 500 and does NOT overwrite the blob', async () => {

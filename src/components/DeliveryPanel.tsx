@@ -1,15 +1,8 @@
-import type { DeliveryModule, Status } from '../../shared/readiness'
+import type { DeliveryModule } from '../../shared/readiness'
 import { ProgressBar } from './ProgressBar'
 import { BucketColumn } from './BucketColumn'
 import { AssumedBadge } from './AssumedBadge'
-
-const PILL: Record<Status, string> = {
-  on_track: 'green',
-  in_progress: 'blue',
-  early: 'grey',
-  at_risk: 'amber',
-  blocked: 'red',
-}
+import { STATUS_PILL } from '../lib/statusPill'
 
 export function DeliveryPanel({ module: m }: { module: DeliveryModule }) {
   return (
@@ -32,7 +25,7 @@ export function DeliveryPanel({ module: m }: { module: DeliveryModule }) {
           <div className="label">Delivery progress</div>
           <div>
             <span className="bignum">{m.percent}<span className="unit">%</span></span>
-            <span className={`pill ${PILL[m.status]}`}>{m.statusLabel}</span>
+            <span className={`pill ${STATUS_PILL[m.status]}`}>{m.statusLabel}</span>
           </div>
           <ProgressBar percent={m.percent} color={m.accentColor} />
           <div className="note">{m.note}</div>

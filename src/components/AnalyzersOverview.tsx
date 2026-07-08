@@ -1,14 +1,7 @@
-import type { Module, Status } from '../../shared/readiness'
+import type { Module } from '../../shared/readiness'
 import { ProgressBar } from './ProgressBar'
 import { globalAnalyzerPercent } from '../lib/analyzers'
-
-const PILL: Record<Status, string> = {
-  on_track: 'green',
-  in_progress: 'blue',
-  early: 'grey',
-  at_risk: 'amber',
-  blocked: 'red',
-}
+import { STATUS_PILL } from '../lib/statusPill'
 
 export function AnalyzersOverview({ analyzers, onSelect }: {
   analyzers: Module[]
@@ -35,7 +28,7 @@ export function AnalyzersOverview({ analyzers, onSelect }: {
             <div className="ac-name">{m.name}</div>
             <div>
               <span className="ac-pct">{m.percent}%</span>
-              <span className={`pill ${PILL[m.status]}`}>{m.statusLabel}</span>
+              <span className={`pill ${STATUS_PILL[m.status]}`}>{m.statusLabel}</span>
             </div>
             <ProgressBar percent={m.percent} color={m.accentColor} />
           </button>

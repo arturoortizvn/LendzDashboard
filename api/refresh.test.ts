@@ -33,16 +33,18 @@ test('rejects requests without the cron secret', async () => {
   expect(writeLatest).not.toHaveBeenCalled()
 })
 
-test('fetches both boards, assembles, writes the blob, and returns 200', async () => {
+test('fetches all six boards, assembles, writes the blob, and returns 200', async () => {
   vi.mocked(fetchBoardStories).mockResolvedValue([
     { name: 'F-01-06 · Eligibility', status: 'Done', module: 'Pricing & Eligibility' },
   ])
   const res = mockRes()
   await handler({ headers: { authorization: 'Bearer secret' } } as unknown as VercelRequest, res as VercelResponse)
   expect(res.statusCode).toBe(200)
-  expect(fetchBoardStories).toHaveBeenCalledTimes(2)
+  expect(fetchBoardStories).toHaveBeenCalledTimes(6)
   const boardIds = vi.mocked(fetchBoardStories).mock.calls.map((c) => c[0].boardId)
-  expect(boardIds).toContain(18403908550)
+  expect(boardIds).toEqual(
+    expect.arrayContaining([18402839374, 18420951194, 18420951197, 18420951201, 18420951200, 18403908550]),
+  )
   expect(writeLatest).toHaveBeenCalledTimes(1)
 })
 

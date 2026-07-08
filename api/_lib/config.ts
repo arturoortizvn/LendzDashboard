@@ -1,47 +1,49 @@
 import type { Status } from '../../shared/readiness.js'
 
-export const BOARD_ID = 18402839374
+export type ModuleKey = 'pe' | 'vt' | 'uw' | 'lexi' | 'bank' | 'id' | 'pl' | 'paystub' | 'tax'
 
-export const ANALYZER_BOARD_ID = 18403908550
+export { ANALYZER_KEYS } from '../../shared/readiness.js'
 
-export function getAnalyzerBoardId(): number {
-  const n = Number(process.env.ID_MONDAY_ANALYZERS)
-  return Number.isFinite(n) && n > 0 ? n : ANALYZER_BOARD_ID
-}
+// Canonical module order for the payload and the visible-module set.
+export const MODULE_ORDER: readonly ModuleKey[] = [
+  'pe', 'vt', 'uw', 'lexi', 'bank', 'id', 'pl', 'paystub', 'tax',
+]
 
-export function getAnalyzerColumnId(): string {
-  return process.env.MONDAY_ANALYZER_COLUMN_ID ?? ''
-}
-
-export const DEDICATED_ANALYZER_KEYS = ['bank', 'id', 'pl', 'paystub'] as const
-export type DedicatedAnalyzerKey = (typeof DEDICATED_ANALYZER_KEYS)[number]
-
-export const DEDICATED_ANALYZER_BOARDS: Record<DedicatedAnalyzerKey, number> = {
+// One dedicated Monday board per module, read whole (no module-column routing).
+// null = board does not exist yet, so the module stays hidden until an id is set.
+const MODULE_BOARD_DEFAULTS: Record<ModuleKey, number | null> = {
+  pe: 18420951236,
+  vt: null,
+  uw: 18420951193,
+  lexi: null,
   bank: 18420951194,
   id: 18420951197,
   pl: 18420951201,
   paystub: 18420951200,
+  tax: null,
 }
 
-const DEDICATED_ANALYZER_ENV: Record<DedicatedAnalyzerKey, string> = {
+const MODULE_BOARD_ENV: Record<ModuleKey, string> = {
+  pe: 'ID_MONDAY_PE',
+  vt: 'ID_MONDAY_VT',
+  uw: 'ID_MONDAY_UW',
+  lexi: 'ID_MONDAY_LEXI',
   bank: 'ID_MONDAY_BANK',
   id: 'ID_MONDAY_ID',
   pl: 'ID_MONDAY_PL',
   paystub: 'ID_MONDAY_PAYSTUB',
+  tax: 'ID_MONDAY_TAX',
 }
 
-export function getDedicatedAnalyzerBoardId(key: DedicatedAnalyzerKey): number {
-  const n = Number(process.env[DEDICATED_ANALYZER_ENV[key]])
-  return Number.isFinite(n) && n > 0 ? n : DEDICATED_ANALYZER_BOARDS[key]
+export function getModuleBoardId(key: ModuleKey): number | null {
+  const n = Number(process.env[MODULE_BOARD_ENV[key]])
+  if (Number.isFinite(n) && n > 0) return n
+  return MODULE_BOARD_DEFAULTS[key]
 }
 
-export type ModuleKey = 'pe' | 'vt' | 'uw' | 'lexi' | 'bank' | 'id' | 'pl' | 'paystub' | 'tax'
-
-export const DELIVERY_KEYS: readonly ModuleKey[] = ['pe', 'vt', 'uw', 'lexi']
-
-export { ANALYZER_KEYS } from '../../shared/readiness.js'
-
-export const FORCE_ASSUMED: ReadonlySet<ModuleKey> = new Set<ModuleKey>()
+export function boardBackedKeys(): ModuleKey[] {
+  return MODULE_ORDER.filter((k) => getModuleBoardId(k) != null)
+}
 
 export type Bucket = 'delivered' | 'inProgress' | 'remaining'
 
@@ -59,27 +61,6 @@ export const STATUS_BUCKET: Record<string, Bucket> = {
 
 export function bucketForStatus(status: string | null | undefined): Bucket {
   return STATUS_BUCKET[status ?? ''] ?? 'remaining'
-}
-
-export const MODULE_LABELS: Record<string, ModuleKey> = {
-  'Pricing and Eligibility': 'pe',
-  'Verified Truth': 'vt',
-  Underwriting: 'uw',
-  'Lexi Intelligence': 'lexi',
-  'ID Analyzer': 'id',
-  'Tax Analyzer': 'tax',
-  'Bank Analyzer': 'bank',
-  Bank: 'bank',
-  ID: 'id',
-  Tax: 'tax',
-}
-
-// Module label whose items count toward every analyzer module, not just one.
-export const SHARED_LABEL = 'Shared'
-
-export function moduleKeyForLabel(label: string | null | undefined): ModuleKey | null {
-  if (!label) return null
-  return MODULE_LABELS[label] ?? null
 }
 
 export function statusFromPercent(percent: number): Status {
@@ -107,17 +88,6 @@ export function getMondayToken(): string {
   const t = process.env.MONDAY_API_TOKEN
   if (!t) throw new Error('MONDAY_API_TOKEN is not set')
   return t
-}
-
-export const MODULE_COLUMN_ID = 'color_mm4e3r3v'
-
-export function getModuleColumnId(): string {
-  return process.env.MONDAY_MODULE_COLUMN_ID || MODULE_COLUMN_ID
-}
-
-export function getBoardId(): number {
-  const n = Number(process.env.ID_MONDAY)
-  return Number.isFinite(n) && n > 0 ? n : BOARD_ID
 }
 
 export function getCronSecret(): string {

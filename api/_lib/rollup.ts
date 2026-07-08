@@ -2,21 +2,17 @@ import type { BucketItem, DeliveryModule, Module, ReadinessPayload } from '../..
 import { MODULES_BY_KEY } from '../../shared/readiness.js'
 import type { RawStory } from './monday.js'
 import {
-  DELIVERY_KEYS,
-  FORCE_ASSUMED,
   bucketForStatus,
   cleanTitle,
-  moduleKeyForLabel,
-  SHARED_LABEL,
   statusFromPercent,
   STATUS_LABELS,
+  boardBackedKeys,
   type ModuleKey,
-  type DedicatedAnalyzerKey,
 } from './config.js'
 
 export function buildDeliveryModule(key: string, stories: RawStory[]): DeliveryModule {
   const base = MODULES_BY_KEY[key] as DeliveryModule
-  if (FORCE_ASSUMED.has(key as ModuleKey) || stories.length === 0) {
+  if (stories.length === 0) {
     return { ...base, assumed: true, assumedLabel: base.assumedLabel ?? 'Awaiting board data' }
   }
 
@@ -50,44 +46,10 @@ export function buildDeliveryModule(key: string, stories: RawStory[]): DeliveryM
   }
 }
 
-function buildModulesForKeys(stories: RawStory[], keys: readonly ModuleKey[]): Record<string, DeliveryModule> {
-  const byKey: Record<string, RawStory[]> = {}
-  for (const k of keys) byKey[k] = []
-  for (const s of stories) {
-    if (s.module === SHARED_LABEL) {
-      for (const k of keys) byKey[k].push(s)
-      continue
-    }
-    const key = moduleKeyForLabel(s.module)
-    if (key && byKey[key]) byKey[key].push(s)
-  }
-  const result: Record<string, DeliveryModule> = {}
-  for (const k of keys) result[k] = buildDeliveryModule(k, byKey[k])
-  return result
-}
-
-export function buildDeliveryModules(stories: RawStory[]): Record<string, DeliveryModule> {
-  return buildModulesForKeys(stories, DELIVERY_KEYS)
-}
-
-const TAX_ONLY: readonly ModuleKey[] = ['tax']
-
-export function buildTaxModule(stories: RawStory[]): DeliveryModule {
-  return buildModulesForKeys(stories, TAX_ONLY).tax
-}
-
 export function assembleLivePayload(
-  deliveryStories: RawStory[],
-  dedicated: Record<DedicatedAnalyzerKey, RawStory[]>,
-  taxStories: RawStory[],
+  storiesByModule: Partial<Record<ModuleKey, RawStory[]>>,
   now: string,
 ): ReadinessPayload {
-  const d = buildDeliveryModules(deliveryStories)
-  const bank = buildDeliveryModule('bank', dedicated.bank)
-  const id = buildDeliveryModule('id', dedicated.id)
-  const pl = buildDeliveryModule('pl', dedicated.pl)
-  const paystub = buildDeliveryModule('paystub', dedicated.paystub)
-  const tax = buildTaxModule(taxStories)
-  const modules: Module[] = [d.pe, d.vt, d.uw, d.lexi, bank, id, pl, paystub, tax]
+  const modules: Module[] = boardBackedKeys().map((k) => buildDeliveryModule(k, storiesByModule[k] ?? []))
   return { asOf: now, builtAt: now, source: 'live', modules }
 }

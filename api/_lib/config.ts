@@ -13,11 +13,33 @@ export function getAnalyzerColumnId(): string {
   return process.env.MONDAY_ANALYZER_COLUMN_ID ?? ''
 }
 
-export type ModuleKey = 'pe' | 'vt' | 'uw' | 'lexi' | 'bank' | 'id' | 'tax'
+export const DEDICATED_ANALYZER_KEYS = ['bank', 'id', 'pl', 'paystub'] as const
+export type DedicatedAnalyzerKey = (typeof DEDICATED_ANALYZER_KEYS)[number]
+
+export const DEDICATED_ANALYZER_BOARDS: Record<DedicatedAnalyzerKey, number> = {
+  bank: 18420951194,
+  id: 18420951197,
+  pl: 18420951201,
+  paystub: 18420951200,
+}
+
+const DEDICATED_ANALYZER_ENV: Record<DedicatedAnalyzerKey, string> = {
+  bank: 'ID_MONDAY_BANK',
+  id: 'ID_MONDAY_ID',
+  pl: 'ID_MONDAY_PL',
+  paystub: 'ID_MONDAY_PAYSTUB',
+}
+
+export function getDedicatedAnalyzerBoardId(key: DedicatedAnalyzerKey): number {
+  const n = Number(process.env[DEDICATED_ANALYZER_ENV[key]])
+  return Number.isFinite(n) && n > 0 ? n : DEDICATED_ANALYZER_BOARDS[key]
+}
+
+export type ModuleKey = 'pe' | 'vt' | 'uw' | 'lexi' | 'bank' | 'id' | 'pl' | 'paystub' | 'tax'
 
 export const DELIVERY_KEYS: readonly ModuleKey[] = ['pe', 'vt', 'uw', 'lexi']
 
-export const ANALYZER_KEYS: readonly ModuleKey[] = ['bank', 'id', 'tax']
+export { ANALYZER_KEYS } from '../../shared/readiness.js'
 
 export const FORCE_ASSUMED: ReadonlySet<ModuleKey> = new Set<ModuleKey>()
 

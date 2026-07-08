@@ -12,6 +12,9 @@ import {
   getAnalyzerBoardId,
   getAnalyzerColumnId,
   ANALYZER_BOARD_ID,
+  DEDICATED_ANALYZER_KEYS,
+  DEDICATED_ANALYZER_BOARDS,
+  getDedicatedAnalyzerBoardId,
 } from './config'
 
 test('maps Monday statuses to buckets, unknown/blank → remaining', () => {
@@ -85,8 +88,32 @@ test('maps the Analyzers Module labels to keys', () => {
   expect(moduleKeyForLabel('Tax')).toBe('tax')
 })
 
-test('ANALYZER_KEYS are bank/id/tax', () => {
-  expect(ANALYZER_KEYS).toEqual(['bank', 'id', 'tax'])
+test('ANALYZER_KEYS are bank/id/pl/paystub/tax', () => {
+  expect(ANALYZER_KEYS).toEqual(['bank', 'id', 'pl', 'paystub', 'tax'])
+})
+
+test('DEDICATED_ANALYZER_KEYS are the four own-board analyzers', () => {
+  expect(DEDICATED_ANALYZER_KEYS).toEqual(['bank', 'id', 'pl', 'paystub'])
+})
+
+test('DEDICATED_ANALYZER_BOARDS maps each analyzer to its default board id', () => {
+  expect(DEDICATED_ANALYZER_BOARDS).toEqual({
+    bank: 18420951194,
+    id: 18420951197,
+    pl: 18420951201,
+    paystub: 18420951200,
+  })
+})
+
+test('getDedicatedAnalyzerBoardId returns the default when the env is unset/invalid, else the parsed override', () => {
+  const orig = process.env.ID_MONDAY_BANK
+  delete process.env.ID_MONDAY_BANK
+  expect(getDedicatedAnalyzerBoardId('bank')).toBe(18420951194)
+  process.env.ID_MONDAY_BANK = 'not-a-number'
+  expect(getDedicatedAnalyzerBoardId('bank')).toBe(18420951194)
+  process.env.ID_MONDAY_BANK = '55555'
+  expect(getDedicatedAnalyzerBoardId('bank')).toBe(55555)
+  process.env.ID_MONDAY_BANK = orig
 })
 
 test('getAnalyzerBoardId returns ANALYZER_BOARD_ID for unset/invalid; parses valid ids', () => {

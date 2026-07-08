@@ -133,3 +133,21 @@ Spec: `docs/superpowers/specs/2026-06-22-remove-auth-design.md` · Plan: `docs/s
 **Manual follow-ups (owner):**
 1. Remove the three Clerk env vars from Vercel (Preview + Production): `vercel env rm VITE_CLERK_PUBLISHABLE_KEY`, `vercel env rm CLERK_SECRET_KEY`, `vercel env rm CLERK_AUTHORIZED_PARTIES`.
 2. Deactivate (or delete) the Clerk application in the Clerk dashboard.
+
+---
+
+# PHASE 4 — Per-analyzer Monday boards + Analyzers overview — IN PROGRESS
+
+Branch: `feature/analyzer-boards-overview` · Spec: `docs/superpowers/specs/2026-07-08-analyzer-boards-overview-design.md`
+
+## 2026-07-08 — Per-analyzer Monday boards + Analyzers overview
+
+- Bank/ID/P&L/Paystub each read a dedicated Monday board (whole board = one
+  analyzer, no module routing); env-overridable ids.
+- Tax unchanged: shared board 18403908550, module='Tax Analyzer'.
+- Added P&L and Paystub analyzer modules; payload now 9 modules.
+- SPA nav is two-tier: delivery modules + an Analyzers section with an
+  Overview (story-weighted global %) and one sub-tab per analyzer.
+- Spec: docs/superpowers/specs/2026-07-08-analyzer-boards-overview-design.md
+- Deploy check: PENDING manual verification at deploy time — confirm the prod
+  MONDAY_API_TOKEN can read the four new boards via a /api/refresh 200.

@@ -1,13 +1,13 @@
 import type { Status } from '../../shared/readiness.js'
+import { MODULE_KEYS } from '../../shared/readiness.js'
 
 export type ModuleKey = 'pe' | 'vt' | 'uw' | 'lexi' | 'bank' | 'id' | 'pl' | 'paystub' | 'tax'
 
 export { ANALYZER_KEYS } from '../../shared/readiness.js'
 
-// Canonical module order for the payload and the visible-module set.
-export const MODULE_ORDER: readonly ModuleKey[] = [
-  'pe', 'vt', 'uw', 'lexi', 'bank', 'id', 'pl', 'paystub', 'tax',
-]
+// Canonical module order, derived from the single MODULES source so live and
+// baseline payloads can never drift in ordering.
+export const MODULE_ORDER = MODULE_KEYS as readonly ModuleKey[]
 
 // One dedicated Monday board per module, read whole (no module-column routing).
 // null = board does not exist yet, so the module stays hidden until an id is set.

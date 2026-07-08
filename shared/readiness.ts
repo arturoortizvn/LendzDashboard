@@ -287,6 +287,8 @@ const tax: DeliveryModule = {
 
 export const MODULES: Module[] = [pe, vt, uw, lexi, bank, id, pl, paystub, tax]
 
+export const MODULE_KEYS: readonly string[] = MODULES.map((m) => m.key)
+
 export const MODULES_BY_KEY: Record<string, Module> = Object.fromEntries(
   MODULES.map((m) => [m.key, m]),
 )

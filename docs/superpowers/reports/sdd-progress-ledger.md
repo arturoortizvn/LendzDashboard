@@ -167,3 +167,21 @@ Branch: `feature/analyzer-boards-overview` · Spec: `docs/superpowers/specs/2026
 - Visible now: pe, uw, bank, id, pl, paystub. Suite 64/64, build clean,
   whole-branch review = merge-ready.
 - Spec/plan: docs/superpowers/{specs,plans}/2026-07-08-refresh-resilient-per-module-boards*
+
+---
+
+# PHASE 5 — Monday sub-tasks visible in the dashboard (display-only) — 2026-07-08
+
+Branch: `feature/monday-subtasks-visibility` · Spec: `docs/superpowers/specs/2026-07-08-monday-subtasks-visibility-design.md` · Plan: `docs/superpowers/plans/2026-07-08-monday-subtasks-visibility.md`
+
+**Scope:** Monday sub-items now surface nested under their parent story in each bucket card, read-only, with a per-sub-task status dot (green/amber/red/grey) and a `X/Y done` roll-up. **Display-only:** sub-tasks never change a module's `percent`/`counts` (locked by a differential rollup test).
+
+**Pipeline:** `fetchBoardStories` GraphQL now pulls `subitems { name column_values(ids:["status"]) }` (sub-item status column is `status`, distinct from the parent `task_status`) → `RawStory.subtasks` → `buildDeliveryModule` attaches cleaned sub-tasks to each `BucketItem` (code prefix like `U-02-ID-01:` stripped) → `BucketColumn` renders the nested list. Sub-task status→dot-tone/done derived in `src/lib/subtaskStatus.ts` (front-end, mirrors `statusPill.ts`). Sub-item boards use Monday default labels (`Working on it`/`Done`/`Stuck`/unset), a subset of the existing `STATUS_BUCKET` map.
+
+**Adoption note:** sub-tasks are sparse today — populated on the ID Analyzer (`U-02-ID`, 10 sub-items) and Underwriting (`U-05-W2`, `U-05-1099`, 7 each) boards; PE/Bank have the column but empty. Value grows as teams populate sub-tasks.
+
+**Built subagent-driven:** 5 TDD tasks + per-task reviews + one a11y fix (status dots got `role="img"` + `aria-label`, empty→`No status`) + whole-branch review (opus). Commits `fd5b1eb..a45f3e1`. Suite 73/73, `npm run build` clean, all commits carry the session trailer.
+
+**Whole-branch review (opus): Ready to merge = YES** — no Critical/Important. Minor follow-ups (non-blocking): `SubtaskTone` duplicates BucketColumn's non-exported `Tone`; `.subroll` CSS duplicates `.wt`; `subtaskStatus()` called twice per sub-task; spec internally inconsistent on done-derivation (§2 "reuse STATUS_BUCKET" vs §5 "subtaskStatus.ts" — impl followed §5, no live divergence for the closed label set).
+
+**PENDING (deploy-time, not code):** live check that sub-tasks render with real Monday data in production requires a deploy + cron `/api/refresh` (`MONDAY_API_TOKEN` is cron-only, not local). Rendering + pipeline logic verified by 73/73 tests incl. a real RTL render asserting the dots, roll-up text, and aria-labels.

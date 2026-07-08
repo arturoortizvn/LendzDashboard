@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest'
-import { assembleLivePayload, buildAnalyzerModules, buildDeliveryModule } from './rollup'
+import { assembleLivePayload, buildTaxModule, buildDeliveryModule } from './rollup'
 import { MODULES_BY_KEY } from '../../shared/readiness'
 import type { DeliveryModule } from '../../shared/readiness'
 import type { RawStory } from './monday'
@@ -30,61 +30,65 @@ test('a module with no stories falls back to the assumed baseline', () => {
   expect(m.buckets).toBe((base as typeof m).buckets)
 })
 
-test('assembleLivePayload returns 7 modules in PoC order, source live', () => {
-  const p = assembleLivePayload([], [], '2026-06-18T00:00:00Z')
-  expect(p.modules.map((m) => m.key)).toEqual(['pe', 'vt', 'uw', 'lexi', 'bank', 'id', 'tax'])
+test('assembleLivePayload returns 9 modules in tab order, source live', () => {
+  const p = assembleLivePayload([], { bank: [], id: [], pl: [], paystub: [] }, [], '2026-07-08T00:00:00Z')
+  expect(p.modules.map((m) => m.key)).toEqual(['pe', 'vt', 'uw', 'lexi', 'bank', 'id', 'pl', 'paystub', 'tax'])
   expect(p.source).toBe('live')
-  expect(p.builtAt).toBe('2026-06-18T00:00:00Z')
-  expect(p.asOf).toBe('2026-06-18T00:00:00Z')
+  expect(p.builtAt).toBe('2026-07-08T00:00:00Z')
+  expect(p.asOf).toBe('2026-07-08T00:00:00Z')
+})
+
+test('dedicated analyzer stories count regardless of the module column', () => {
+  const p = assembleLivePayload(
+    [],
+    {
+      bank: [{ name: 'Done thing', status: 'Done', module: null }],
+      id: [],
+      pl: [{ name: 'PL story', status: 'Ready to start', module: 'Tax Analyzer' }],
+      paystub: [],
+    },
+    [],
+    'now',
+  )
+  const bank = p.modules.find((m) => m.key === 'bank')!
+  expect(bank.assumed).toBe(false)
+  expect(bank.counts).toEqual({ delivered: 1, inProgress: 0, remaining: 0 })
+  const pl = p.modules.find((m) => m.key === 'pl')!
+  expect(pl.assumed).toBe(false)
+  expect(pl.counts).toEqual({ delivered: 0, inProgress: 0, remaining: 1 })
 })
 
 test('analyzer-labeled stories on the Stories board are ignored by the delivery rollup', () => {
   const stories: RawStory[] = [
     { name: 'U-02-01 · Bank Statement Analyzer', status: 'Done', module: 'Bank Analyzer' },
   ]
-  const p = assembleLivePayload(stories, [], 'now')
+  const p = assembleLivePayload(stories, { bank: [], id: [], pl: [], paystub: [] }, [], 'now')
   expect(p.modules.find((m) => m.key === 'bank')!.assumed).toBe(true)
 })
 
-test('buildAnalyzerModules routes Bank/ID/Tax labels and computes live', () => {
+test('assembleLivePayload routes a real Module label to its delivery module', () => {
   const stories: RawStory[] = [
-    { name: 'Implement Bank Statement Analyzer', status: 'Done', module: 'Bank' },
-    { name: 'Add AI usage tracking', status: 'Working on it', module: 'Bank' },
-    { name: 'Implement ID Document Analyzer', status: 'Not Started', module: 'ID' },
+    { name: 'F-01-06 · Eligibility evaluation', status: 'Done', module: 'Pricing and Eligibility' },
   ]
-  const a = buildAnalyzerModules(stories)
-  expect(a.bank.assumed).toBe(false)
-  expect(a.bank.counts).toEqual({ delivered: 1, inProgress: 1, remaining: 0 })
-  expect(a.bank.percent).toBe(50)
-  expect(a.id.assumed).toBe(false)
-  expect(a.id.counts).toEqual({ delivered: 0, inProgress: 0, remaining: 1 })
-  expect(a.id.percent).toBe(0)
-  expect(a.tax.assumed).toBe(true)
+  const p = assembleLivePayload(stories, { bank: [], id: [], pl: [], paystub: [] }, [], '2026-07-08T00:00:00Z')
+  const pe = p.modules.find((m) => m.key === 'pe') as DeliveryModule | undefined
+  expect(pe?.assumed).toBe(false)
+  expect(pe?.counts.delivered).toBe(1)
 })
 
-test('buildAnalyzerModules excludes unmapped and null-label items', () => {
+test('buildTaxModule routes Tax Analyzer and Shared labels from the shared board', () => {
   const stories: RawStory[] = [
-    { name: 'Implement Credit Report Analyzer', status: 'Done', module: 'Credit Report' },
-    { name: 'Item 4', status: '', module: null },
+    { name: 'Tax form extraction', status: 'Done', module: 'Tax Analyzer' },
+    { name: 'Shared infra', status: 'Working on it', module: 'Shared' },
+    { name: 'Bank thing', status: 'Done', module: 'Bank Analyzer' },
   ]
-  const a = buildAnalyzerModules(stories)
-  expect(a.bank.assumed).toBe(true)
-  expect(a.id.assumed).toBe(true)
-  expect(a.tax.assumed).toBe(true)
+  const tax = buildTaxModule(stories)
+  expect(tax.assumed).toBe(false)
+  expect(tax.counts).toEqual({ delivered: 1, inProgress: 1, remaining: 0 })
 })
 
-test('buildAnalyzerModules fans Shared stories to bank, id, and tax', () => {
-  const stories: RawStory[] = [
-    { name: 'Shared infra', status: 'Done', module: 'Shared' },
-    { name: 'Implement Bank Statement Analyzer', status: 'Working on it', module: 'Bank' },
-  ]
-  const a = buildAnalyzerModules(stories)
-  expect(a.bank.counts).toEqual({ delivered: 1, inProgress: 1, remaining: 0 })
-  expect(a.id.counts).toEqual({ delivered: 1, inProgress: 0, remaining: 0 })
-  expect(a.tax.counts).toEqual({ delivered: 1, inProgress: 0, remaining: 0 })
-  expect(a.bank.assumed).toBe(false)
-  expect(a.id.assumed).toBe(false)
-  expect(a.tax.assumed).toBe(false)
+test('buildTaxModule with no tax stories falls back to the assumed baseline', () => {
+  expect(buildTaxModule([]).assumed).toBe(true)
 })
 
 test('zero-stories assumed: module without base assumedLabel gets fallback label, module with base label preserves it', () => {
@@ -105,14 +109,4 @@ test('vt computes live from its stories (no longer force-assumed)', () => {
   expect(m.assumed).toBe(false)
   expect(m.counts).toEqual({ delivered: 1, inProgress: 0, remaining: 1 })
   expect(m.percent).toBe(50)
-})
-
-test('assembleLivePayload routes a real Module label to its delivery module', () => {
-  const stories: RawStory[] = [
-    { name: 'F-01-06 · Eligibility evaluation', status: 'Done', module: 'Pricing and Eligibility' },
-  ]
-  const p = assembleLivePayload(stories, [], '2026-06-18T00:00:00Z')
-  const pe = p.modules.find((m) => m.key === 'pe') as DeliveryModule | undefined
-  expect(pe?.assumed).toBe(false)
-  expect(pe?.counts.delivered).toBe(1)
 })

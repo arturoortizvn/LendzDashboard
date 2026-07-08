@@ -2,7 +2,6 @@ import type { BucketItem, DeliveryModule, Module, ReadinessPayload } from '../..
 import { MODULES_BY_KEY } from '../../shared/readiness.js'
 import type { RawStory } from './monday.js'
 import {
-  ANALYZER_KEYS,
   DELIVERY_KEYS,
   FORCE_ASSUMED,
   bucketForStatus,
@@ -12,6 +11,7 @@ import {
   statusFromPercent,
   STATUS_LABELS,
   type ModuleKey,
+  type DedicatedAnalyzerKey,
 } from './config.js'
 
 export function buildDeliveryModule(key: string, stories: RawStory[]): DeliveryModule {
@@ -70,17 +70,24 @@ export function buildDeliveryModules(stories: RawStory[]): Record<string, Delive
   return buildModulesForKeys(stories, DELIVERY_KEYS)
 }
 
-export function buildAnalyzerModules(stories: RawStory[]): Record<string, DeliveryModule> {
-  return buildModulesForKeys(stories, ANALYZER_KEYS)
+const TAX_ONLY: readonly ModuleKey[] = ['tax']
+
+export function buildTaxModule(stories: RawStory[]): DeliveryModule {
+  return buildModulesForKeys(stories, TAX_ONLY).tax
 }
 
 export function assembleLivePayload(
-  storyStories: RawStory[],
-  analyzerStories: RawStory[],
+  deliveryStories: RawStory[],
+  dedicated: Record<DedicatedAnalyzerKey, RawStory[]>,
+  taxStories: RawStory[],
   now: string,
 ): ReadinessPayload {
-  const d = buildDeliveryModules(storyStories)
-  const a = buildAnalyzerModules(analyzerStories)
-  const modules: Module[] = [d.pe, d.vt, d.uw, d.lexi, a.bank, a.id, a.tax]
+  const d = buildDeliveryModules(deliveryStories)
+  const bank = buildDeliveryModule('bank', dedicated.bank)
+  const id = buildDeliveryModule('id', dedicated.id)
+  const pl = buildDeliveryModule('pl', dedicated.pl)
+  const paystub = buildDeliveryModule('paystub', dedicated.paystub)
+  const tax = buildTaxModule(taxStories)
+  const modules: Module[] = [d.pe, d.vt, d.uw, d.lexi, bank, id, pl, paystub, tax]
   return { asOf: now, builtAt: now, source: 'live', modules }
 }

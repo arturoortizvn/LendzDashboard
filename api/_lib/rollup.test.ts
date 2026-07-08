@@ -41,7 +41,7 @@ test('zero-stories assumed: module without base assumedLabel gets fallback label
 
 test('assembleLivePayload emits only board-backed modules in order, source live', () => {
   const p = assembleLivePayload({}, '2026-07-08T00:00:00Z')
-  expect(p.modules.map((m) => m.key)).toEqual(['pe', 'uw', 'bank', 'id', 'pl', 'paystub'])
+  expect(p.modules.map((m) => m.key)).toEqual(['pe', 'uw', 'broker', 'bank', 'id', 'pl', 'paystub'])
   expect(p.source).toBe('live')
   expect(p.builtAt).toBe('2026-07-08T00:00:00Z')
   expect(p.asOf).toBe('2026-07-08T00:00:00Z')

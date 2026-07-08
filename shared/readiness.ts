@@ -194,6 +194,24 @@ const lexi: DeliveryModule = {
   },
 }
 
+const broker: DeliveryModule = {
+  key: 'broker',
+  name: 'Broker LOS',
+  sub: 'Broker-facing loan origination system.',
+  phase: 'delivery',
+  percent: 0,
+  status: 'early',
+  statusLabel: 'Early build',
+  note: 'Dedicated board just seeded. Figures assumed until stories land.',
+  targetDate: 'Release Two',
+  dateConfidence: 'projected',
+  assumed: true,
+  assumedLabel: 'Awaiting board data',
+  accentColor: '#3D6CC4',
+  counts: { delivered: 0, inProgress: 0, remaining: 0 },
+  buckets: { delivered: [], inProgress: [], remaining: [] },
+}
+
 const id: DeliveryModule = {
   key: 'id',
   name: 'ID Analyzer',
@@ -291,7 +309,7 @@ const tax: DeliveryModule = {
   },
 }
 
-export const MODULES: Module[] = [pe, vt, uw, lexi, bank, id, pl, paystub, tax]
+export const MODULES: Module[] = [pe, vt, uw, lexi, broker, bank, id, pl, paystub, tax]
 
 export const MODULE_KEYS: readonly string[] = MODULES.map((m) => m.key)
 

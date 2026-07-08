@@ -1,7 +1,7 @@
 import type { Status } from '../../shared/readiness.js'
 import { MODULE_KEYS } from '../../shared/readiness.js'
 
-export type ModuleKey = 'pe' | 'vt' | 'uw' | 'lexi' | 'bank' | 'id' | 'pl' | 'paystub' | 'tax'
+export type ModuleKey = 'pe' | 'vt' | 'uw' | 'lexi' | 'broker' | 'bank' | 'id' | 'pl' | 'paystub' | 'tax'
 
 export { ANALYZER_KEYS } from '../../shared/readiness.js'
 
@@ -16,6 +16,7 @@ const MODULE_BOARD_DEFAULTS: Record<ModuleKey, number | null> = {
   vt: null,
   uw: 18420951193,
   lexi: null,
+  broker: 18420631446,
   bank: 18420951194,
   id: 18420951197,
   pl: 18420951201,
@@ -28,6 +29,7 @@ const MODULE_BOARD_ENV: Record<ModuleKey, string> = {
   vt: 'ID_MONDAY_VT',
   uw: 'ID_MONDAY_UW',
   lexi: 'ID_MONDAY_LEXI',
+  broker: 'ID_MONDAY_BROKER',
   bank: 'ID_MONDAY_BANK',
   id: 'ID_MONDAY_ID',
   pl: 'ID_MONDAY_PL',
@@ -35,10 +37,29 @@ const MODULE_BOARD_ENV: Record<ModuleKey, string> = {
   tax: 'ID_MONDAY_TAX',
 }
 
+// Most boards keep their story status in `task_status`; the Broker LOS board uses
+// the Monday-default `status` column. Per-module so a new board must declare its own.
+const MODULE_STATUS_COLUMN: Record<ModuleKey, string> = {
+  pe: 'task_status',
+  vt: 'task_status',
+  uw: 'task_status',
+  lexi: 'task_status',
+  broker: 'status',
+  bank: 'task_status',
+  id: 'task_status',
+  pl: 'task_status',
+  paystub: 'task_status',
+  tax: 'task_status',
+}
+
 export function getModuleBoardId(key: ModuleKey): number | null {
   const n = Number(process.env[MODULE_BOARD_ENV[key]])
   if (Number.isFinite(n) && n > 0) return n
   return MODULE_BOARD_DEFAULTS[key]
+}
+
+export function getModuleStatusColumnId(key: ModuleKey): string {
+  return MODULE_STATUS_COLUMN[key]
 }
 
 export function boardBackedKeys(): ModuleKey[] {

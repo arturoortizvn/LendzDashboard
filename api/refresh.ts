@@ -7,6 +7,7 @@ import {
   boardBackedKeys,
   getCronSecret,
   getModuleBoardId,
+  getModuleStatusColumnId,
   getMondayToken,
   type ModuleKey,
 } from './_lib/config.js'
@@ -20,7 +21,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const keys = boardBackedKeys()
     const results = await Promise.all(
       keys.map((k) =>
-        fetchBoardStories({ token, boardId: getModuleBoardId(k)!, statusColumnId: 'task_status' })
+        fetchBoardStories({ token, boardId: getModuleBoardId(k)!, statusColumnId: getModuleStatusColumnId(k) })
           .then((stories) => ({ k, stories: stories as RawStory[] | null }))
           .catch(() => ({ k, stories: null as RawStory[] | null })),
       ),

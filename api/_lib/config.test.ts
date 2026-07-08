@@ -7,6 +7,7 @@ import {
   ANALYZER_KEYS,
   MODULE_ORDER,
   getModuleBoardId,
+  getModuleStatusColumnId,
   boardBackedKeys,
   SUBITEM_STATUS_COLUMN_ID,
 } from './config'
@@ -43,8 +44,15 @@ test('ANALYZER_KEYS are bank/id/pl/paystub/tax', () => {
   expect(ANALYZER_KEYS).toEqual(['bank', 'id', 'pl', 'paystub', 'tax'])
 })
 
-test('MODULE_ORDER is the canonical nine-module order', () => {
-  expect(MODULE_ORDER).toEqual(['pe', 'vt', 'uw', 'lexi', 'bank', 'id', 'pl', 'paystub', 'tax'])
+test('MODULE_ORDER is the canonical ten-module order', () => {
+  expect(MODULE_ORDER).toEqual(['pe', 'vt', 'uw', 'lexi', 'broker', 'bank', 'id', 'pl', 'paystub', 'tax'])
+})
+
+test('getModuleStatusColumnId defaults to task_status, broker reads the status column', () => {
+  expect(getModuleStatusColumnId('pe')).toBe('task_status')
+  expect(getModuleStatusColumnId('uw')).toBe('task_status')
+  expect(getModuleStatusColumnId('bank')).toBe('task_status')
+  expect(getModuleStatusColumnId('broker')).toBe('status')
 })
 
 test('getModuleBoardId: default, env override, invalid/unset falls back to default', () => {
@@ -81,8 +89,8 @@ test('an env override makes a boardless module visible', () => {
   else process.env.ID_MONDAY_TAX = orig
 })
 
-test('boardBackedKeys are the six board-backed modules in canonical order', () => {
-  expect(boardBackedKeys()).toEqual(['pe', 'uw', 'bank', 'id', 'pl', 'paystub'])
+test('boardBackedKeys are the seven board-backed modules in canonical order', () => {
+  expect(boardBackedKeys()).toEqual(['pe', 'uw', 'broker', 'bank', 'id', 'pl', 'paystub'])
 })
 
 test('SUBITEM_STATUS_COLUMN_ID is the Monday default status column id', () => {

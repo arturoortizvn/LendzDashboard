@@ -32,18 +32,25 @@ test('rejects requests without the cron secret', async () => {
   expect(writeLatest).not.toHaveBeenCalled()
 })
 
-test('fetches every board-backed board with task_status, assembles, writes, and returns 200', async () => {
+test('fetches every board-backed board with its status column, assembles, writes, and returns 200', async () => {
   vi.mocked(fetchBoardStories).mockResolvedValue([{ name: 'X', status: 'Done', module: null }])
   const res = mockRes()
   await handler(authed, res as VercelResponse)
   expect(res.statusCode).toBe(200)
-  expect(fetchBoardStories).toHaveBeenCalledTimes(6)
+  expect(fetchBoardStories).toHaveBeenCalledTimes(7)
   const calls = vi.mocked(fetchBoardStories).mock.calls.map((c) => c[0])
   const boardIds = calls.map((c) => c.boardId)
   expect(boardIds).toEqual(
-    expect.arrayContaining([18420951236, 18420951193, 18420951194, 18420951197, 18420951201, 18420951200]),
+    expect.arrayContaining([
+      18420951236, 18420951193, 18420631446, 18420951194, 18420951197, 18420951201, 18420951200,
+    ]),
   )
-  for (const c of calls) expect(c.statusColumnId).toBe('task_status')
+  // The Broker LOS board keeps its status in `status`; every other board uses `task_status`.
+  const statusColumnByBoard = new Map(calls.map((c) => [c.boardId, c.statusColumnId]))
+  expect(statusColumnByBoard.get(18420631446)).toBe('status')
+  for (const [boardId, col] of statusColumnByBoard) {
+    if (boardId !== 18420631446) expect(col).toBe('task_status')
+  }
   expect(writeLatest).toHaveBeenCalledTimes(1)
 })
 

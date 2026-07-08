@@ -151,3 +151,19 @@ Branch: `feature/analyzer-boards-overview` · Spec: `docs/superpowers/specs/2026
 - Spec: docs/superpowers/specs/2026-07-08-analyzer-boards-overview-design.md
 - Deploy check: PENDING manual verification at deploy time — confirm the prod
   MONDAY_API_TOKEN can read the four new boards via a /api/refresh 200.
+
+## 2026-07-08 — Resilient per-module boards (fix)
+
+- The old combined Monday boards (Stories `18402839374`, shared Analyzers
+  `18403908550`) were decommissioned in Carlos's per-module migration, so
+  `/api/refresh` 500'd (blob frozen since 2026-07-07, all `assumed`).
+- Unified every module onto its own dedicated board (`MODULE_BOARDS` map +
+  `boardBackedKeys()`), read whole with `task_status` — removed all `module`
+  column routing.
+- Resilience: per-board `catch` → a failed/missing board falls back to baseline;
+  only 500 (preserving the last-good blob) when EVERY board fetch fails.
+- Modules whose board does not exist yet (vt/lexi/tax) are hidden from the
+  payload; they reappear automatically when their board id is set in config/env.
+- Visible now: pe, uw, bank, id, pl, paystub. Suite 64/64, build clean,
+  whole-branch review = merge-ready.
+- Spec/plan: docs/superpowers/{specs,plans}/2026-07-08-refresh-resilient-per-module-boards*

@@ -185,3 +185,35 @@ Branch: `feature/monday-subtasks-visibility` · Spec: `docs/superpowers/specs/20
 **Whole-branch review (opus): Ready to merge = YES** — no Critical/Important. Minor follow-ups (non-blocking): `SubtaskTone` duplicates BucketColumn's non-exported `Tone`; `.subroll` CSS duplicates `.wt`; `subtaskStatus()` called twice per sub-task; spec internally inconsistent on done-derivation (§2 "reuse STATUS_BUCKET" vs §5 "subtaskStatus.ts" — impl followed §5, no live divergence for the closed label set).
 
 **PENDING (deploy-time, not code):** live check that sub-tasks render with real Monday data in production requires a deploy + cron `/api/refresh` (`MONDAY_API_TOKEN` is cron-only, not local). Rendering + pipeline logic verified by 73/73 tests incl. a real RTL render asserting the dots, roll-up text, and aria-labels.
+
+---
+
+# PHASE 6 — Broker LOS module (new per-module board) — 2026-07-08
+
+Branch: `feature/broker-los-board` · Spec: `docs/superpowers/specs/2026-07-08-broker-los-board-design.md` · Commits `954323c..ce8c307`
+
+**Scope:** Added a new **Broker LOS** delivery module (broker-facing loan origination
+system) reading its own Monday board `18420631446` (workspace LendLogic, 36 items).
+Inserted after Lexi in the module order (10 modules total); **not** an analyzer.
+
+**Key finding:** unlike every other per-module board (status in `task_status`), the
+Broker LOS board keeps story status in the Monday-default **`status`** column. `api/refresh.ts`
+hardcoded `task_status`, which would have read every item blank → 0%. Fixed by making
+the status column **per-module**: new `MODULE_STATUS_COLUMN` `Record` + `getModuleStatusColumnId`
+in `config.ts` (default `task_status`, `broker → status`), full record so a future board
+must declare its own column. `refresh.ts` now passes `getModuleStatusColumnId(k)`.
+
+**Verified against live board data:** 10 Done · 3 Working on it · 23 blank (mostly the
+"Tech Stack & Dependencies" group, unstatused) → the production rollup yields
+**Broker LOS 28% · Early build · "10 of 36 stories accepted"** (delivered 10 / inProgress 3
+/ remaining 23), live (`assumed:false`). Labels all already in `STATUS_BUCKET`. Blank
+tech-stack items count as remaining — faithful to the board; % rises as they're marked.
+
+**Files:** `shared/readiness.ts` (broker module + baseline), `api/_lib/config.ts`
+(ModuleKey, board maps, status-column map), `api/refresh.ts`. Tests updated across
+`config`/`refresh`/`readiness`/`rollup`/`shared` specs. Suite **74/74**, `npm run build` clean.
+
+**PENDING (deploy-time, not code):** live prod check that `MONDAY_API_TOKEN` reads board
+`18420631446` via a `/api/refresh` 200 and Broker LOS appears in `/api/readiness`. Logic
+verified by the suite + a throwaway rollup run against the real 36-item distribution.
+Optional: set `ID_MONDAY_BROKER` in Vercel (code default already resolves).

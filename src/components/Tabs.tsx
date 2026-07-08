@@ -1,22 +1,26 @@
-import type { Module } from '../../shared/readiness'
+export interface TabItem {
+  key: string
+  name: string
+  percent?: number
+}
 
-export function Tabs({ modules, activeKey, onSelect }: {
-  modules: Module[]
+export function Tabs({ items, activeKey, onSelect }: {
+  items: TabItem[]
   activeKey: string
   onSelect: (key: string) => void
 }) {
   return (
     <div className="tabs" role="tablist">
-      {modules.map((m) => (
+      {items.map((it) => (
         <button
-          key={m.key}
-          className={`tab${m.key === activeKey ? ' active' : ''}`}
+          key={it.key}
+          className={`tab${it.key === activeKey ? ' active' : ''}`}
           role="tab"
-          aria-selected={m.key === activeKey}
-          onClick={() => onSelect(m.key)}
+          aria-selected={it.key === activeKey}
+          onClick={() => onSelect(it.key)}
         >
-          {m.name}
-          <span className="mini">{m.percent}%</span>
+          {it.name}
+          {it.percent != null && <span className="mini">{it.percent}%</span>}
         </button>
       ))}
     </div>

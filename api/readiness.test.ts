@@ -1,10 +1,10 @@
 import { afterEach, expect, test, vi } from 'vitest'
 import type { VercelRequest, VercelResponse } from '@vercel/node'
+import type { ReadinessPayload } from '../shared/readiness'
 
 vi.mock('./_lib/blob.js', () => ({ readLatest: vi.fn() }))
 
 import handler from './readiness'
-import { buildPayload } from '../shared/readiness'
 import { readLatest } from './_lib/blob.js'
 
 function mockRes() {
@@ -19,28 +19,33 @@ function mockRes() {
 
 afterEach(() => vi.clearAllMocks())
 
-test('serves the last-known-good payload publicly, no shared cache', async () => {
-  const live = { ...buildPayload('2026-06-18T00:00:00Z'), source: 'live' as const, builtAt: '2026-06-18T00:00:00Z' }
-  vi.mocked(readLatest).mockResolvedValue(live)
+test('serves the stored blob verbatim, publicly, no shared cache', async () => {
+  const blob = {
+    asOf: '2026-06-18T00:00:00Z',
+    builtAt: '2026-06-18T00:00:00Z',
+    source: 'live',
+    modules: [{ key: 'pe' }, { key: 'uw' }, { key: 'bank' }],
+  } as unknown as ReadinessPayload
+  vi.mocked(readLatest).mockResolvedValue(blob)
   const res = mockRes()
   await handler({ headers: {} } as VercelRequest, res as VercelResponse)
   expect(res.statusCode).toBe(200)
   const body = res.body as { modules: unknown[]; source: string; builtAt: string }
   expect(body.source).toBe('live')
-  expect(body.modules).toHaveLength(9)
+  expect(body.modules).toHaveLength(3)
   expect(body.builtAt).toBe('2026-06-18T00:00:00Z')
   expect(readLatest).toHaveBeenCalledTimes(1)
   expect(res.headers['Cache-Control']).toContain('public')
   expect(res.headers['Cache-Control']).toContain('no-store')
 })
 
-test('falls back to the config baseline when the blob is missing', async () => {
+test('baseline fallback contains only board-backed modules (boardless ones hidden)', async () => {
   vi.mocked(readLatest).mockResolvedValue(null)
   const res = mockRes()
   await handler({ headers: {} } as VercelRequest, res as VercelResponse)
   expect(res.statusCode).toBe(200)
-  const body = res.body as { modules: unknown[]; source?: string }
-  expect(body.modules).toHaveLength(9)
+  const body = res.body as { modules: Array<{ key: string }>; source?: string }
+  expect(body.modules.map((m) => m.key)).toEqual(['pe', 'uw', 'bank', 'id', 'pl', 'paystub'])
   expect(body.source).toBe('baseline')
   expect(res.headers['Cache-Control']).toContain('public')
   expect(res.headers['Cache-Control']).toContain('no-store')

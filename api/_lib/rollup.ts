@@ -4,6 +4,7 @@ import type { RawStory } from './monday.js'
 import {
   bucketForStatus,
   cleanTitle,
+  cleanSubtaskTitle,
   statusFromPercent,
   STATUS_LABELS,
   boardBackedKeys,
@@ -22,7 +23,12 @@ export function buildDeliveryModule(key: string, stories: RawStory[]): DeliveryM
     remaining: [] as BucketItem[],
   }
   for (const s of stories) {
-    buckets[bucketForStatus(s.status)].push({ title: cleanTitle(s.name) })
+    const item: BucketItem = { title: cleanTitle(s.name) }
+    const subs = s.subtasks ?? []
+    if (subs.length) {
+      item.subtasks = subs.map((t) => ({ title: cleanSubtaskTitle(t.name), status: t.status }))
+    }
+    buckets[bucketForStatus(s.status)].push(item)
   }
 
   const counts = {

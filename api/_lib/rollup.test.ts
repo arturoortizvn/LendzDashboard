@@ -75,3 +75,32 @@ test('boardless modules (vt/lexi/tax) never appear in the payload', () => {
     expect(p.modules.find((m) => m.key === k)).toBeUndefined()
   }
 })
+
+test('attaches cleaned sub-tasks to their parent story without changing counts or percent', () => {
+  const withSubs: RawStory[] = [
+    { name: 'ID Analyzer', status: 'In Progress', module: null, subtasks: [
+      { name: 'U-02-ID-01: Structured extraction', status: 'Done' },
+      { name: 'U-02-ID-02: Provenance linking', status: '' },
+    ] },
+    { name: 'Extraction spike', status: 'Done', module: null },
+  ]
+  const m = buildDeliveryModule('id', withSubs)
+  const item = m.buckets.inProgress[0]
+  expect(item.title).toBe('ID Analyzer')
+  expect(item.subtasks).toEqual([
+    { title: 'Structured extraction', status: 'Done' },
+    { title: 'Provenance linking', status: '' },
+  ])
+
+  const withoutSubs = buildDeliveryModule('id', [
+    { name: 'ID Analyzer', status: 'In Progress', module: null },
+    { name: 'Extraction spike', status: 'Done', module: null },
+  ])
+  expect(m.counts).toEqual(withoutSubs.counts)
+  expect(m.percent).toBe(withoutSubs.percent)
+})
+
+test('a story with no sub-tasks yields a bucket item without a subtasks field', () => {
+  const m = buildDeliveryModule('id', [{ name: 'Plain story', status: 'Done', module: null }])
+  expect(m.buckets.delivered[0].subtasks).toBeUndefined()
+})

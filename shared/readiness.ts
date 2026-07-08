@@ -9,10 +9,16 @@ export type Module = DeliveryModule
 export type Status = 'on_track' | 'in_progress' | 'early' | 'at_risk' | 'blocked'
 export type DateConfidence = 'committed' | 'projected'
 
+export interface SubTask {
+  title: string
+  status: string
+}
+
 export interface BucketItem {
   title: string
   detail?: string
   weight?: number
+  subtasks?: SubTask[]
 }
 
 export interface DeliveryModule {

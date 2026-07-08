@@ -37,6 +37,8 @@ export interface DeliveryModule {
   }
 }
 
+export const ANALYZER_KEYS = ['bank', 'id', 'pl', 'paystub', 'tax'] as const
+
 export function buildPayload(now: string): ReadinessPayload {
   return { asOf: now, modules: MODULES, source: 'baseline' }
 }
@@ -216,6 +218,42 @@ const id: DeliveryModule = {
   },
 }
 
+const pl: DeliveryModule = {
+  key: 'pl',
+  name: 'P&L Analyzer',
+  sub: 'Profit & Loss statement extraction for self-employed Non-QM income.',
+  phase: 'delivery',
+  percent: 0,
+  status: 'early',
+  statusLabel: 'Early build',
+  note: 'Dedicated board just seeded. Figures assumed until stories land.',
+  targetDate: 'Release Two',
+  dateConfidence: 'projected',
+  assumed: true,
+  assumedLabel: 'Awaiting board data',
+  accentColor: '#B5654A',
+  counts: { delivered: 0, inProgress: 0, remaining: 0 },
+  buckets: { delivered: [], inProgress: [], remaining: [] },
+}
+
+const paystub: DeliveryModule = {
+  key: 'paystub',
+  name: 'Paystub Analyzer',
+  sub: 'Income extraction and verification from paystubs.',
+  phase: 'delivery',
+  percent: 0,
+  status: 'early',
+  statusLabel: 'Early build',
+  note: 'Dedicated board just seeded. Figures assumed until stories land.',
+  targetDate: 'Release Two',
+  dateConfidence: 'projected',
+  assumed: true,
+  assumedLabel: 'Awaiting board data',
+  accentColor: '#5B8C5A',
+  counts: { delivered: 0, inProgress: 0, remaining: 0 },
+  buckets: { delivered: [], inProgress: [], remaining: [] },
+}
+
 const tax: DeliveryModule = {
   key: 'tax',
   name: 'Tax Docs Analyzer',
@@ -247,7 +285,7 @@ const tax: DeliveryModule = {
   },
 }
 
-export const MODULES: Module[] = [pe, vt, uw, lexi, bank, id, tax]
+export const MODULES: Module[] = [pe, vt, uw, lexi, bank, id, pl, paystub, tax]
 
 export const MODULES_BY_KEY: Record<string, Module> = Object.fromEntries(
   MODULES.map((m) => [m.key, m]),

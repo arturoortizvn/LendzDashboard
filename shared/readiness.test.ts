@@ -1,12 +1,16 @@
-import { MODULES, buildPayload } from './readiness'
+import { MODULES, ANALYZER_KEYS, buildPayload } from './readiness'
 
-test('exposes seven modules in PoC tab order', () => {
-  expect(MODULES.map((m) => m.key)).toEqual(['pe', 'vt', 'uw', 'lexi', 'bank', 'id', 'tax'])
+test('exposes nine modules in tab order', () => {
+  expect(MODULES.map((m) => m.key)).toEqual(['pe', 'vt', 'uw', 'lexi', 'bank', 'id', 'pl', 'paystub', 'tax'])
 })
 
 test('flags exactly the assumed modules', () => {
   const assumed = MODULES.filter((m) => m.assumed).map((m) => m.key)
-  expect(assumed.sort()).toEqual(['bank', 'id', 'tax', 'vt'])
+  expect(assumed.sort()).toEqual(['bank', 'id', 'paystub', 'pl', 'tax', 'vt'])
+})
+
+test('ANALYZER_KEYS lists the five analyzers in order', () => {
+  expect(ANALYZER_KEYS).toEqual(['bank', 'id', 'pl', 'paystub', 'tax'])
 })
 
 test('bank is a delivery module', () => {

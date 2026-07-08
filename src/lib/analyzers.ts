@@ -14,6 +14,7 @@ export function globalAnalyzerPercent(analyzers: Module[]): number {
   let delivered = 0
   let total = 0
   for (const m of analyzers) {
+    if (m.assumed) continue
     delivered += m.counts.delivered
     total += m.counts.delivered + m.counts.inProgress + m.counts.remaining
   }

@@ -36,3 +36,22 @@ test('globalAnalyzerPercent is story-weighted across analyzers', () => {
 test('globalAnalyzerPercent is 0 when there are no stories', () => {
   expect(globalAnalyzerPercent([mk('bank', 0, 0, 0)])).toBe(0)
 })
+
+test('globalAnalyzerPercent excludes assumed modules from the weighted sum', () => {
+  const live = mk('bank', 2, 0, 1)          // 2/3 real
+  const assumed = { ...mk('tax', 1, 1, 3), assumed: true } as Module
+  expect(globalAnalyzerPercent([live, assumed])).toBe(67) // 2/3 only; assumed tax ignored
+})
+
+test('globalAnalyzerPercent is 0 when every analyzer is assumed', () => {
+  const a = { ...mk('bank', 1, 1, 1), assumed: true } as Module
+  const b = { ...mk('id', 2, 0, 0), assumed: true } as Module
+  expect(globalAnalyzerPercent([a, b])).toBe(0)
+})
+
+test('partitionModules skips analyzer keys missing from the payload', () => {
+  const modules = [mk('pe',0,0,0), mk('bank',0,0,0), mk('id',0,0,0), mk('tax',0,0,0)]
+  const { delivery, analyzers } = partitionModules(modules)
+  expect(delivery.map((m) => m.key)).toEqual(['pe'])
+  expect(analyzers.map((m) => m.key)).toEqual(['bank', 'id', 'tax']) // pl/paystub absent, no undefined
+})

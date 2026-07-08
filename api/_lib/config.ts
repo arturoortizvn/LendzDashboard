@@ -84,6 +84,12 @@ export function cleanTitle(name: string): string {
     .trim()
 }
 
+export const SUBITEM_STATUS_COLUMN_ID = 'status'
+
+export function cleanSubtaskTitle(name: string): string {
+  return name.replace(/^[A-Z0-9]+(?:-[A-Z0-9]+)+:\s*/, '').trim()
+}
+
 export function getMondayToken(): string {
   const t = process.env.MONDAY_API_TOKEN
   if (!t) throw new Error('MONDAY_API_TOKEN is not set')

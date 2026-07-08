@@ -2,11 +2,13 @@ import { expect, test } from 'vitest'
 import {
   bucketForStatus,
   cleanTitle,
+  cleanSubtaskTitle,
   statusFromPercent,
   ANALYZER_KEYS,
   MODULE_ORDER,
   getModuleBoardId,
   boardBackedKeys,
+  SUBITEM_STATUS_COLUMN_ID,
 } from './config'
 
 test('maps Monday statuses to buckets, unknown/blank → remaining', () => {
@@ -81,4 +83,17 @@ test('an env override makes a boardless module visible', () => {
 
 test('boardBackedKeys are the six board-backed modules in canonical order', () => {
   expect(boardBackedKeys()).toEqual(['pe', 'uw', 'bank', 'id', 'pl', 'paystub'])
+})
+
+test('SUBITEM_STATUS_COLUMN_ID is the Monday default status column id', () => {
+  expect(SUBITEM_STATUS_COLUMN_ID).toBe('status')
+})
+
+test('cleanSubtaskTitle strips a hyphenated code prefix but leaves plain colons intact', () => {
+  expect(cleanSubtaskTitle('U-02-ID-01: Structured extraction')).toBe('Structured extraction')
+  expect(cleanSubtaskTitle('U-05-1099-07: Regression test dataset (delivery requirement)')).toBe(
+    'Regression test dataset (delivery requirement)',
+  )
+  expect(cleanSubtaskTitle('Note: something')).toBe('Note: something')
+  expect(cleanSubtaskTitle('Plain title')).toBe('Plain title')
 })

@@ -50,6 +50,9 @@ test('renders sub-tasks with a roll-up count when a story has them', () => {
   expect(screen.getByText('1/3 done')).toBeInTheDocument()
   expect(screen.getByText('Structured extraction')).toBeInTheDocument()
   expect(screen.getByText('Provenance linking')).toBeInTheDocument()
+  expect(screen.getByLabelText('Done')).toBeInTheDocument()
+  expect(screen.getByLabelText('No status')).toBeInTheDocument()
+  expect(screen.getByLabelText('Working on it')).toBeInTheDocument()
 })
 
 test('renders no roll-up or sub-task list when a story has no sub-tasks', () => {

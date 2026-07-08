@@ -31,7 +31,12 @@ export function BucketColumn({ tone, title, count, items }: {
               <ul className="subtasks">
                 {subs.map((s, j) => (
                   <li className="subtask" key={j}>
-                    <span className={`sdot ${subtaskStatus(s.status).tone}`} />
+                    <span
+                      className={`sdot ${subtaskStatus(s.status).tone}`}
+                      role="img"
+                      aria-label={s.status ? s.status : 'No status'}
+                      title={s.status ? s.status : 'No status'}
+                    />
                     {s.title}
                   </li>
                 ))}

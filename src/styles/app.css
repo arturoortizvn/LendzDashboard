@@ -114,6 +114,13 @@
   .st.none { color: #5A6B82; } .st.prog { color: #1857B0; }
   .wt { display: inline-block; font-size: 11px; font-weight: 700; color: #3F5874; background: #EEF3F9;
     border-radius: 6px; padding: 1px 7px; margin-left: 6px; }
+  .subroll { display: inline-block; font-size: 11px; font-weight: 700; color: #3F5874; background: #EEF3F9;
+    border-radius: 6px; padding: 1px 7px; margin-left: 6px; }
+  .subtasks { list-style: none; margin: 8px 0 0; padding: 0; }
+  .subtask { display: flex; align-items: center; gap: 7px; font-size: 12px; color: #41566F; font-weight: 400; margin-top: 5px; }
+  .subtask .sdot { flex: 0 0 auto; width: 8px; height: 8px; border-radius: 50%; }
+  .sdot.green { background: #2E9E6B; } .sdot.amber { background: #F0A93B; }
+  .sdot.grey { background: #9AAEC6; } .sdot.red { background: #D84C4C; }
 
   .assumed { display: inline-block; font-size: 10.5px; font-weight: 700; color: #8A5A00; background: #FFF3DD;
     border-radius: 5px; padding: 2px 8px; margin-left: 8px; vertical-align: 2px; text-transform: uppercase; letter-spacing: .03em; }

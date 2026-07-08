@@ -55,6 +55,7 @@
   .pill.amber { background: #FFF3DD; color: #8A5A00; }
   .pill.blue  { background: #E7F0FC; color: #1857B0; }
   .pill.grey  { background: #EEF1F5; color: #5A6B82; }
+  .pill.red   { background: #FDE7E9; color: #B4232A; }
   .track { margin-top: 16px; height: 9px; border-radius: 999px; background: #EDF1F6; overflow: hidden; }
   .fill { height: 100%; border-radius: 999px; background: #1E6FE0; width: 0; transition: width 1s cubic-bezier(.2,.7,.3,1); }
   .note { font-size: 12.5px; color: #5A6B82; margin-top: 12px; line-height: 1.55; }

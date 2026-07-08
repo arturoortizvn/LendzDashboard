@@ -10,10 +10,11 @@ vi.mock('./api', () => ({
 
 afterEach(() => vi.clearAllMocks())
 
-test('renders the first module after load and switches tabs', async () => {
+test('renders the first module, then navigates into the Analyzers section', async () => {
   render(<App />)
-  // 2 = the active tab button plus the rendered panel's mtitle
   await waitFor(() => expect(screen.getAllByText('Pricing & Eligibility')).toHaveLength(2))
+  await userEvent.click(screen.getByRole('tab', { name: /Analyzers/ }))
+  await waitFor(() => expect(screen.getByText('Analyzer readiness')).toBeInTheDocument())
   await userEvent.click(screen.getByRole('tab', { name: /Bank Statement Analyzer/ }))
   await waitFor(() => expect(screen.getAllByText('Bank Statement Analyzer')).toHaveLength(2))
 })

@@ -54,6 +54,23 @@ test('with a brief, renders the editorial pill, status line, and date strip (not
   expect(screen.getByText('On track')).toBeInTheDocument()
 })
 
+const datesOnlyBrief: DeliveryModule = {
+  ...m,
+  brief: { goNoGo: 'Jul 27', goLive: 'Aug 1' },
+}
+
+test('a dates-only brief shows the date strip without an editorial pill or status line', () => {
+  render(<DeliveryPanel module={datesOnlyBrief} />)
+  expect(screen.getByText('Go / No-Go')).toBeInTheDocument()
+  expect(screen.getByText('Jul 27')).toBeInTheDocument()
+  expect(screen.getByText('Go Live')).toBeInTheDocument()
+  expect(screen.queryByText('Target')).not.toBeInTheDocument()
+  // no hand-written status line for a dates-only brief
+  expect(screen.queryByText('Engine complete. Minor fixes only.')).not.toBeInTheDocument()
+  // the computed status pill still renders in the progress card
+  expect(screen.getByText('On track')).toBeInTheDocument()
+})
+
 const withDetail: DeliveryModule = {
   ...m,
   brief: {

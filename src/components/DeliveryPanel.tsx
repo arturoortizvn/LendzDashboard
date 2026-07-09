@@ -14,7 +14,7 @@ export function DeliveryPanel({ module: m }: { module: DeliveryModule }) {
           <div className="mtitle">
             {m.name}
             {m.assumed && m.assumedLabel ? <> <AssumedBadge text={m.assumedLabel} /></> : null}
-            {brief ? <> <span className={`pill ${STATUS_PILL[brief.programStatus]}`}>{brief.programStatusLabel}</span></> : null}
+            {brief?.programStatus ? <> <span className={`pill ${STATUS_PILL[brief.programStatus]}`}>{brief.programStatusLabel}</span></> : null}
           </div>
           <div className="msub">{m.sub}</div>
           {brief?.statusLine ? <div className="statusline">{brief.statusLine}</div> : null}

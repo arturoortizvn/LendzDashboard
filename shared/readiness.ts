@@ -20,10 +20,12 @@ export interface CardDetail {
 }
 
 // Editorial (PM-authored) header content, independent of the live Monday rollup.
+// Every field is optional so a card can carry just release dates without a
+// hand-written program status or status line.
 export interface CardBrief {
-  programStatus: Status
-  programStatusLabel: string
-  statusLine: string
+  programStatus?: Status
+  programStatusLabel?: string
+  statusLine?: string
   goNoGo?: string
   goLive?: string
   detail?: CardDetail
@@ -88,6 +90,10 @@ const bank: DeliveryModule = {
   dateConfidence: 'projected',
   assumed: true,
   assumedLabel: 'Awaiting board data',
+  brief: {
+    goNoGo: 'Jul 27',
+    goLive: 'Aug 1',
+  },
   counts: { delivered: 0, inProgress: 0, remaining: 0 },
   buckets: { delivered: [], inProgress: [], remaining: [] },
 }
@@ -232,6 +238,10 @@ const lexi: DeliveryModule = {
   dateConfidence: 'committed',
   assumed: false,
   accentColor: '#C77DBB',
+  brief: {
+    goNoGo: 'Jul 20',
+    goLive: 'Aug 1',
+  },
   counts: { delivered: 11, inProgress: 0, remaining: 9 },
   buckets: {
     delivered: [
@@ -290,6 +300,10 @@ const id: DeliveryModule = {
   assumed: true,
   assumedLabel: 'Scaffolding done',
   accentColor: '#E0913B',
+  brief: {
+    goNoGo: 'Jul 27',
+    goLive: 'Aug 1',
+  },
   // delivered bcount is "inherited foundation" (1 item); inProgress card shows 1; remaining card shows "—" (2 items listed)
   counts: { delivered: 1, inProgress: 1, remaining: 2 },
   buckets: {
@@ -320,6 +334,10 @@ const pl: DeliveryModule = {
   assumed: true,
   assumedLabel: 'Awaiting board data',
   accentColor: '#B5654A',
+  brief: {
+    goNoGo: 'Jul 27',
+    goLive: 'Aug 1',
+  },
   counts: { delivered: 0, inProgress: 0, remaining: 0 },
   buckets: { delivered: [], inProgress: [], remaining: [] },
 }
@@ -338,6 +356,10 @@ const paystub: DeliveryModule = {
   assumed: true,
   assumedLabel: 'Awaiting board data',
   accentColor: '#5B8C5A',
+  brief: {
+    goNoGo: 'Jul 27',
+    goLive: 'Aug 1',
+  },
   counts: { delivered: 0, inProgress: 0, remaining: 0 },
   buckets: { delivered: [], inProgress: [], remaining: [] },
 }

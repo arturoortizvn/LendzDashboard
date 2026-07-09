@@ -26,6 +26,21 @@ test('pe/uw/broker carry an editorial brief; uw has expandable detail', () => {
   expect(uw.brief?.detail?.analyzerStatus).toHaveLength(4)
 })
 
+test('lexi and the four analyzers carry Go/No-Go and Go Live dates', () => {
+  const expected: Record<string, { goNoGo: string; goLive: string }> = {
+    lexi: { goNoGo: 'Jul 20', goLive: 'Aug 1' },
+    bank: { goNoGo: 'Jul 27', goLive: 'Aug 1' },
+    id: { goNoGo: 'Jul 27', goLive: 'Aug 1' },
+    pl: { goNoGo: 'Jul 27', goLive: 'Aug 1' },
+    paystub: { goNoGo: 'Jul 27', goLive: 'Aug 1' },
+  }
+  for (const [key, dates] of Object.entries(expected)) {
+    const mod = MODULES.find((m) => m.key === key)!
+    expect(mod.brief?.goNoGo).toBe(dates.goNoGo)
+    expect(mod.brief?.goLive).toBe(dates.goLive)
+  }
+})
+
 test('bank is a delivery module', () => {
   const bank = MODULES.find((m) => m.key === 'bank')!
   expect(bank.phase).toBe('delivery')

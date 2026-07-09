@@ -1,5 +1,5 @@
 import type { BucketItem, DeliveryModule, Module, ReadinessPayload } from '../../shared/readiness.js'
-import { MODULES_BY_KEY } from '../../shared/readiness.js'
+import { MODULES_BY_KEY, creditedPercent } from '../../shared/readiness.js'
 import type { RawStory } from './monday.js'
 import {
   bucketForStatus,
@@ -37,7 +37,7 @@ export function buildDeliveryModule(key: string, stories: RawStory[]): DeliveryM
     remaining: buckets.remaining.length,
   }
   const total = counts.delivered + counts.inProgress + counts.remaining
-  const percent = Math.round((counts.delivered / total) * 100)
+  const percent = creditedPercent(counts.delivered, counts.inProgress, total)
   const status = statusFromPercent(percent)
 
   return {

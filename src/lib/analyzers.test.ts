@@ -28,9 +28,9 @@ test('partitionModules splits delivery vs analyzers, analyzers in canonical orde
   expect(analyzers.map((m) => m.key)).toEqual(['bank', 'id', 'pl', 'paystub', 'tax'])
 })
 
-test('globalAnalyzerPercent is story-weighted across analyzers', () => {
+test('globalAnalyzerPercent is story-weighted across analyzers, in-progress at half credit', () => {
   const analyzers = [mk('bank', 2, 0, 1), mk('id', 0, 1, 2)]
-  expect(globalAnalyzerPercent(analyzers)).toBe(33) // 2 delivered / 6 total
+  expect(globalAnalyzerPercent(analyzers)).toBe(42) // (2 + 0.5·1) / 6
 })
 
 test('globalAnalyzerPercent is 0 when there are no stories', () => {

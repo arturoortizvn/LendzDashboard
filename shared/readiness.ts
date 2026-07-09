@@ -61,6 +61,16 @@ export interface DeliveryModule {
 
 export const ANALYZER_KEYS = ['bank', 'id', 'pl', 'paystub', 'tax'] as const
 
+// Weighted delivery progress: a Done story counts fully, an In Progress story
+// counts half, Remaining zero. Single-sourced so the per-module and global
+// rollups can never diverge on the weighting.
+export const IN_PROGRESS_CREDIT = 0.5
+
+export function creditedPercent(delivered: number, inProgress: number, total: number): number {
+  if (total === 0) return 0
+  return Math.round(((delivered + inProgress * IN_PROGRESS_CREDIT) / total) * 100)
+}
+
 export function buildPayload(now: string): ReadinessPayload {
   return { asOf: now, modules: MODULES, source: 'baseline' }
 }

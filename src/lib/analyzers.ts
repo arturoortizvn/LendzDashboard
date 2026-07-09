@@ -1,5 +1,5 @@
 import type { Module } from '../../shared/readiness'
-import { ANALYZER_KEYS } from '../../shared/readiness'
+import { ANALYZER_KEYS, creditedPercent } from '../../shared/readiness'
 
 export function partitionModules(modules: Module[]): { delivery: Module[]; analyzers: Module[] } {
   const analyzerSet = new Set<string>(ANALYZER_KEYS)
@@ -12,11 +12,13 @@ export function partitionModules(modules: Module[]): { delivery: Module[]; analy
 
 export function globalAnalyzerPercent(analyzers: Module[]): number {
   let delivered = 0
+  let inProgress = 0
   let total = 0
   for (const m of analyzers) {
     if (m.assumed) continue
     delivered += m.counts.delivered
+    inProgress += m.counts.inProgress
     total += m.counts.delivered + m.counts.inProgress + m.counts.remaining
   }
-  return total === 0 ? 0 : Math.round((delivered / total) * 100)
+  return creditedPercent(delivered, inProgress, total)
 }

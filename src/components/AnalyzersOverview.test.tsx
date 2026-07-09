@@ -12,7 +12,7 @@ const analyzers = [
 test('shows the story-weighted global percent and a card per analyzer', () => {
   render(<AnalyzersOverview analyzers={analyzers} onSelect={() => {}} />)
   expect(screen.getByText('Analyzer readiness')).toBeInTheDocument()
-  expect(screen.getByText('33')).toBeInTheDocument() // 2 / 6
+  expect(screen.getByText('42')).toBeInTheDocument() // (2 + 0.5·1) / 6
   expect(screen.getByText('Bank Statement Analyzer')).toBeInTheDocument()
   expect(screen.getByText('ID Analyzer')).toBeInTheDocument()
 })

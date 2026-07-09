@@ -12,13 +12,31 @@ test('rolls up counts, percent, status, note, and cleaned titles', () => {
   const m = buildDeliveryModule('pe', stories)
   expect(m.assumed).toBe(false)
   expect(m.counts).toEqual({ delivered: 1, inProgress: 1, remaining: 1 })
-  expect(m.percent).toBe(33)
-  expect(m.status).toBe('early')
-  expect(m.statusLabel).toBe('Early build')
+  expect(m.percent).toBe(50) // (1 delivered + 0.5·1 in-progress) / 3
+  expect(m.status).toBe('in_progress')
+  expect(m.statusLabel).toBe('In progress')
   expect(m.note).toBe('1 of 3 stories accepted.')
   expect(m.buckets.delivered[0].title).toBe('Eligibility evaluation')
   expect(m.buckets.inProgress[0].title).toBe('CLTV calculation issue')
   expect(m.buckets.remaining[0].title).toBe('Series 2 rules')
+})
+
+test('in-progress stories earn half credit toward percent', () => {
+  const allInProgress = buildDeliveryModule('pe', [
+    { id: '1', name: 'A', status: 'In Progress', module: null },
+    { id: '2', name: 'B', status: 'Working on it', module: null },
+  ])
+  expect(allInProgress.counts).toEqual({ delivered: 0, inProgress: 2, remaining: 0 })
+  expect(allInProgress.percent).toBe(50) // 0.5·2 / 2
+
+  const mixed = buildDeliveryModule('pe', [
+    { id: '1', name: 'A', status: 'Done', module: null },
+    { id: '2', name: 'B', status: 'Code Review', module: null },
+    { id: '3', name: 'C', status: 'QA', module: null },
+    { id: '4', name: 'D', status: 'Not Started', module: null },
+  ])
+  expect(mixed.counts).toEqual({ delivered: 1, inProgress: 2, remaining: 1 })
+  expect(mixed.percent).toBe(50) // (1 + 0.5·2) / 4
 })
 
 test('a live rebuild preserves the editorial brief (not overwritten by the rollup)', () => {

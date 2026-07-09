@@ -21,6 +21,13 @@ test('rolls up counts, percent, status, note, and cleaned titles', () => {
   expect(m.buckets.remaining[0].title).toBe('Series 2 rules')
 })
 
+test('a live rebuild preserves the editorial brief (not overwritten by the rollup)', () => {
+  const base = MODULES_BY_KEY['pe'] as { brief?: unknown }
+  const m = buildDeliveryModule('pe', [{ name: 'X', status: 'Done', module: null }])
+  expect(m.assumed).toBe(false)
+  expect(m.brief).toBe(base.brief)
+})
+
 test('a module with no stories falls back to the assumed baseline', () => {
   const base = MODULES_BY_KEY['tax']
   const m = buildDeliveryModule('tax', [])

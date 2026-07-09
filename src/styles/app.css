@@ -35,14 +35,18 @@
   /* Module header band */
   .modband {
     background: #fff; border: 1px solid #E3EAF2; border-radius: 14px;
-    padding: 18px 24px; margin-bottom: 14px; display: flex; align-items: center;
-    justify-content: space-between; border-left: 5px solid #1E6FE0;
+    padding: 18px 24px; margin-bottom: 14px; display: flex; align-items: flex-start;
+    justify-content: space-between; gap: 24px; border-left: 5px solid #1E6FE0;
   }
   .modband .mtitle { font-size: 18px; font-weight: 600; color: #0B1F3A; }
+  .modband .mtitle .pill { font-size: 11.5px; padding: 3px 11px; margin-left: 8px; vertical-align: 2px; }
   .modband .msub { font-size: 13px; color: #5A6B82; margin-top: 2px; }
-  .modband .release { text-align: right; font-size: 12px; color: #5A6B82; }
+  .modband .statusline { font-size: 13px; color: #3B4D66; margin-top: 9px; line-height: 1.55; max-width: 68ch; }
+  .modband .release { text-align: right; font-size: 12px; color: #5A6B82; white-space: nowrap; }
   .modband .release b { display: block; font-size: 15px; color: #0B1F3A; font-weight: 600; margin-top: 2px; }
   .modband .release .est { color: #1E6FE0; }
+  .modband .datestrip { display: flex; gap: 26px; }
+  .modband .datestrip .dlabel { display: block; font-size: 12px; color: #5A6B82; }
 
   /* Top number row */
   .row3 { display: grid; grid-template-columns: 1.3fr 1fr 1fr; gap: 14px; margin-bottom: 14px; }
@@ -96,6 +100,31 @@
   .info.tip-left .tip::after { left: auto; right: 12px; transform: none; }
   th .info { background: rgba(255,255,255,.22); color: #fff; }
   th .info:hover { background: #fff; color: #0B1F3A; }
+
+  /* Expandable card detail (editorial brief) */
+  .cardetail { margin-bottom: 14px; }
+  .cardetail .detailbody {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 26px;
+    background: #fff; border: 1px solid #E3EAF2; border-radius: 12px;
+    padding: 18px 22px; margin-top: 10px;
+  }
+  .cardetail .dgtitle {
+    font-size: 12px; text-transform: uppercase; letter-spacing: .04em;
+    color: #5A6B82; font-weight: 700; margin-bottom: 10px;
+  }
+  .cardetail ul { list-style: none; margin: 0; padding: 0; }
+  .cardetail li {
+    font-size: 12.5px; color: #2A3A4F; line-height: 1.5; margin-bottom: 9px;
+    padding-left: 16px; position: relative;
+  }
+  .cardetail li::before { content: "–"; position: absolute; left: 0; color: #9AAEC6; }
+  .cardetail li:last-child { margin-bottom: 0; }
+  .cardetail li b { color: #0B1F3A; font-weight: 600; }
+  @media (max-width: 640px) {
+    .cardetail .detailbody { grid-template-columns: 1fr; gap: 18px; }
+    .modband { flex-direction: column; }
+    .modband .release, .modband .datestrip { text-align: left; }
+  }
 
   /* Detail table */
   .detail { margin-top: 14px; }

@@ -22,3 +22,55 @@ test('renders module name, percent, and three buckets', () => {
   expect(screen.getByText('In Progress')).toBeInTheDocument()
   expect(screen.getAllByText('Remaining')).toHaveLength(2)
 })
+
+test('without a brief, shows the Target date block and no status line', () => {
+  render(<DeliveryPanel module={m} />)
+  expect(screen.getByText('Target')).toBeInTheDocument()
+  expect(screen.getByText('11 July')).toBeInTheDocument()
+  expect(screen.queryByText('Go / No-Go')).not.toBeInTheDocument()
+})
+
+const withBrief: DeliveryModule = {
+  ...m,
+  brief: {
+    programStatus: 'on_track',
+    programStatusLabel: 'On Track',
+    statusLine: 'Engine complete. Minor fixes only.',
+    goNoGo: 'Jul 20',
+    goLive: 'Aug 1',
+  },
+}
+
+test('with a brief, renders the editorial pill, status line, and date strip (not Target)', () => {
+  render(<DeliveryPanel module={withBrief} />)
+  expect(screen.getByText('On Track')).toBeInTheDocument()
+  expect(screen.getByText('Engine complete. Minor fixes only.')).toBeInTheDocument()
+  expect(screen.getByText('Go / No-Go')).toBeInTheDocument()
+  expect(screen.getByText('Jul 20')).toBeInTheDocument()
+  expect(screen.getByText('Go Live')).toBeInTheDocument()
+  expect(screen.getByText('Aug 1')).toBeInTheDocument()
+  expect(screen.queryByText('Target')).not.toBeInTheDocument()
+  // the live computed pill still renders alongside the editorial one
+  expect(screen.getByText('On track')).toBeInTheDocument()
+})
+
+const withDetail: DeliveryModule = {
+  ...m,
+  brief: {
+    ...withBrief.brief!,
+    goLive: 'Aug 1 (Phase 1)',
+    detail: {
+      phaseScope: ['Document Upload and Versioning'],
+      analyzerStatus: [{ name: 'Bank Statement', note: 'extraction delivered' }],
+    },
+  },
+}
+
+test('with a detail, renders the expandable scope and analyzer status', () => {
+  render(<DeliveryPanel module={withDetail} />)
+  expect(screen.getByText('Phase 1 scope')).toBeInTheDocument()
+  expect(screen.getByText('Document Upload and Versioning')).toBeInTheDocument()
+  expect(screen.getByText('Analyzer status')).toBeInTheDocument()
+  expect(screen.getByText('Bank Statement')).toBeInTheDocument()
+  expect(screen.getByText(/extraction delivered/)).toBeInTheDocument()
+})

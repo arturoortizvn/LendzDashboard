@@ -13,6 +13,19 @@ test('ANALYZER_KEYS lists the five analyzers in order', () => {
   expect(ANALYZER_KEYS).toEqual(['bank', 'id', 'pl', 'paystub', 'tax'])
 })
 
+test('pe/uw/broker carry an editorial brief; uw has expandable detail', () => {
+  for (const key of ['pe', 'uw', 'broker']) {
+    const mod = MODULES.find((m) => m.key === key)!
+    expect(mod.brief?.programStatusLabel).toBe('On Track')
+    expect(mod.brief?.statusLine).toBeTruthy()
+    expect(mod.brief?.goNoGo).toBeTruthy()
+    expect(mod.brief?.goLive).toBeTruthy()
+  }
+  const uw = MODULES.find((m) => m.key === 'uw')!
+  expect(uw.brief?.detail?.phaseScope).toHaveLength(4)
+  expect(uw.brief?.detail?.analyzerStatus).toHaveLength(4)
+})
+
 test('bank is a delivery module', () => {
   const bank = MODULES.find((m) => m.key === 'bank')!
   expect(bank.phase).toBe('delivery')

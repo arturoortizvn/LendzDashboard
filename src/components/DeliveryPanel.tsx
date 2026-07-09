@@ -5,6 +5,8 @@ import { AssumedBadge } from './AssumedBadge'
 import { STATUS_PILL } from '../lib/statusPill'
 
 export function DeliveryPanel({ module: m }: { module: DeliveryModule }) {
+  const brief = m.brief
+  const hasDates = brief && (brief.goNoGo || brief.goLive)
   return (
     <div className="panel active" role="tabpanel">
       <div className="modband" style={m.accentColor ? { borderLeftColor: m.accentColor } : undefined}>
@@ -12,14 +14,38 @@ export function DeliveryPanel({ module: m }: { module: DeliveryModule }) {
           <div className="mtitle">
             {m.name}
             {m.assumed && m.assumedLabel ? <> <AssumedBadge text={m.assumedLabel} /></> : null}
+            {brief ? <> <span className={`pill ${STATUS_PILL[brief.programStatus]}`}>{brief.programStatusLabel}</span></> : null}
           </div>
           <div className="msub">{m.sub}</div>
+          {brief?.statusLine ? <div className="statusline">{brief.statusLine}</div> : null}
         </div>
-        <div className="release">
-          Target
-          <b className={m.dateConfidence === 'projected' ? 'est' : ''}>{m.targetDate}</b>
-        </div>
+        {hasDates ? (
+          <div className="release datestrip">
+            {brief.goNoGo ? <div><span className="dlabel">Go / No-Go</span><b>{brief.goNoGo}</b></div> : null}
+            {brief.goLive ? <div><span className="dlabel">Go Live</span><b>{brief.goLive}</b></div> : null}
+          </div>
+        ) : (
+          <div className="release">
+            Target
+            <b className={m.dateConfidence === 'projected' ? 'est' : ''}>{m.targetDate}</b>
+          </div>
+        )}
       </div>
+      {brief?.detail ? (
+        <details className="detail cardetail">
+          <summary>Phase 1 detail</summary>
+          <div className="detailbody">
+            <div className="dgroup">
+              <div className="dgtitle">Phase 1 scope</div>
+              <ul>{brief.detail.phaseScope.map((s, i) => <li key={i}>{s}</li>)}</ul>
+            </div>
+            <div className="dgroup">
+              <div className="dgtitle">Analyzer status</div>
+              <ul>{brief.detail.analyzerStatus.map((a, i) => <li key={i}><b>{a.name}</b>: {a.note}</li>)}</ul>
+            </div>
+          </div>
+        </details>
+      ) : null}
       <div className="row3">
         <div className="card">
           <div className="label">Delivery progress</div>

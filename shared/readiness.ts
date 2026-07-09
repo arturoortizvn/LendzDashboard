@@ -14,6 +14,21 @@ export interface SubTask {
   status: string
 }
 
+export interface CardDetail {
+  phaseScope: string[]
+  analyzerStatus: { name: string; note: string }[]
+}
+
+// Editorial (PM-authored) header content, independent of the live Monday rollup.
+export interface CardBrief {
+  programStatus: Status
+  programStatusLabel: string
+  statusLine: string
+  goNoGo?: string
+  goLive?: string
+  detail?: CardDetail
+}
+
 export interface BucketItem {
   title: string
   detail?: string
@@ -35,6 +50,7 @@ export interface DeliveryModule {
   assumed: boolean
   assumedLabel?: string
   accentColor?: string
+  brief?: CardBrief
   counts: { delivered: number; inProgress: number; remaining: number }
   buckets: {
     delivered: BucketItem[]
@@ -78,6 +94,14 @@ const pe: DeliveryModule = {
   targetDate: '11 July',
   dateConfidence: 'committed',
   assumed: false,
+  brief: {
+    programStatus: 'on_track',
+    programStatusLabel: 'On Track',
+    statusLine:
+      'Engine complete. Minor fixes and stakeholder-requested enhancements only. Nataliya and Richard loading all products full time using new paste-from-Excel entry.',
+    goNoGo: 'Jul 20',
+    goLive: 'Aug 1',
+  },
   counts: { delivered: 53, inProgress: 14, remaining: 8 },
   buckets: {
     delivered: [
@@ -145,6 +169,28 @@ const uw: DeliveryModule = {
   dateConfidence: 'committed',
   assumed: false,
   accentColor: '#1E8E7E',
+  brief: {
+    programStatus: 'on_track',
+    programStatusLabel: 'On Track',
+    statusLine:
+      'Phase 1 delivers document intake through condition clearance. Document pipeline built, four analyzers in active build. Phase 2 covers the rest of the underwriting workflow, targeted early September.',
+    goNoGo: 'Jul 27',
+    goLive: 'Aug 1 (Phase 1)',
+    detail: {
+      phaseScope: [
+        'Document Upload and Versioning with automatic analyzer re-run',
+        'Bank Statement, ID, Paystub, and P&L Analyzers',
+        'Create, Modify, and Clear Conditions with recomputed Readiness',
+        'Account Executive View in MainLogic',
+      ],
+      analyzerStatus: [
+        { name: 'Bank Statement', note: 'extraction with provenance delivered, format tuning in progress' },
+        { name: 'ID', note: 'active build, five document types supported, extraction complete' },
+        { name: 'Paystub', note: 'early build, pay data extraction with cross-document discrepancy checks' },
+        { name: 'P&L', note: 'early build, self-employed income extraction with bank statement reconciliation' },
+      ],
+    },
+  },
   counts: { delivered: 9, inProgress: 0, remaining: 4 },
   buckets: {
     delivered: [
@@ -208,6 +254,14 @@ const broker: DeliveryModule = {
   assumed: true,
   assumedLabel: 'Awaiting board data',
   accentColor: '#3D6CC4',
+  brief: {
+    programStatus: 'on_track',
+    programStatusLabel: 'On Track',
+    statusLine:
+      'Minor fixes plus new Lexi tools and functionality. New capability: brokers connect directly with their account executive from Lexi Chat.',
+    goNoGo: 'Jul 20',
+    goLive: 'Aug 1',
+  },
   counts: { delivered: 0, inProgress: 0, remaining: 0 },
   buckets: { delivered: [], inProgress: [], remaining: [] },
 }

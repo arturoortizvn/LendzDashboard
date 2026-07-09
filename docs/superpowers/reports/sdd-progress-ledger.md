@@ -217,3 +217,36 @@ tech-stack items count as remaining — faithful to the board; % rises as they'r
 `18420631446` via a `/api/refresh` 200 and Broker LOS appears in `/api/readiness`. Logic
 verified by the suite + a throwaway rollup run against the real 36-item distribution.
 Optional: set `ID_MONDAY_BROKER` in Vercel (code default already resolves).
+
+**CLOSED (deployed to prod 2026-07-09):** merged develop→main, `vercel --prod`; user ran
+the manual refresh — Broker LOS live in production. See [[refresh-is-manual]].
+
+---
+
+# PHASE 7 — Editorial content on delivery cards — 2026-07-08
+
+Branch: `feature/card-editorial-content` · Spec: `docs/superpowers/specs/2026-07-08-card-editorial-content-design.md` · Commits `cea3a05..1dbb4b5`
+
+**Scope:** the delivery card header now carries PM-authored editorial content, independent
+of the live Monday rollup: an editorial **status pill** ("On Track"), a narrative
+**status line**, a two-date **Go/No-Go + Go Live** strip (replaces the single "Target"
+for cards that have it), and — Underwriting only — an **expandable Phase 1 detail**
+(`<details>`, Phase 1 scope + analyzer status). The live body (% progress, computed
+pill, story buckets) is **unchanged** and still shows alongside.
+
+**Data model:** optional `brief?: CardBrief` on `DeliveryModule` (`shared/readiness.ts`),
+with `CardDetail` for the expandable. Preserved through `buildDeliveryModule` (the rollup
+only overrides percent/status/statusLabel/note/counts/buckets and spreads the rest —
+locked by a rollup guard test). Content seeded for **pe/uw/broker** verbatim from the
+content spec; every other card degrades to the current header with no further code.
+
+**Render:** `DeliveryPanel` header extended; `<details class="detail cardetail">` placed
+full-width under `.modband`. Styles added to `app.css` (frontend-design skill): title-context
+pill alignment, `.statusline`, `.datestrip`, two-column `.cardetail .detailbody`, and a
+mobile stack at ≤640px. `.modband` switched to `align-items: flex-start`.
+
+**Verified:** suite **79/79**, `npm run build` green, and a real render (renderToStaticMarkup
++ real MODULES data → headless-Chrome screenshot) confirming the pill, status line, date
+strip, and open expandable render correctly and stay coherent with the existing design.
+
+**PENDING:** user decision on merge → develop/main + deploy.

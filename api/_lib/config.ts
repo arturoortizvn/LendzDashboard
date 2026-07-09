@@ -1,5 +1,6 @@
 import type { Status } from '../../shared/readiness.js'
 import { MODULE_KEYS } from '../../shared/readiness.js'
+import type { RawStory } from './monday.js'
 
 export type ModuleKey = 'pe' | 'vt' | 'uw' | 'lexi' | 'broker' | 'bank' | 'id' | 'pl' | 'paystub' | 'tax'
 
@@ -15,7 +16,7 @@ const MODULE_BOARD_DEFAULTS: Record<ModuleKey, number | null> = {
   pe: 18420951236,
   vt: null,
   uw: 18420951193,
-  lexi: null,
+  lexi: 18420631446,
   broker: 18420631446,
   bank: 18420951194,
   id: 18420951197,
@@ -43,13 +44,37 @@ const MODULE_STATUS_COLUMN: Record<ModuleKey, string> = {
   pe: 'task_status',
   vt: 'task_status',
   uw: 'task_status',
-  lexi: 'task_status',
+  lexi: 'status',
   broker: 'status',
   bank: 'task_status',
   id: 'task_status',
   pl: 'task_status',
   paystub: 'task_status',
   tax: 'task_status',
+}
+
+// The Broker LOS board is shared: these Lexi-scoped items feed the `lexi` module,
+// the rest feed `broker`. Monday is not modified; routing lives here, keyed by item id.
+export const LEXI_BROKER_BOARD_ID = 18420631446
+const LEXI_ITEM_IDS: ReadonlySet<string> = new Set([
+  '12451013226', // Lexi Intelligence — extract into a microservice
+  '12482521999', // Generative UI
+  '12482526623', // Agent loop
+  '12451140139', // Lexi AI assistant (advisory, wizard-first)
+  '12451122951', // Lexi capability standard + tool roadmap
+  '12451013290', // Lexi document upload (chat attachments)
+  '12451008846', // AI — Anthropic Claude (.NET SDK)
+])
+
+export function filterStoriesForModule(
+  key: ModuleKey,
+  boardId: number,
+  stories: RawStory[],
+): RawStory[] {
+  if (boardId !== LEXI_BROKER_BOARD_ID) return stories
+  if (key === 'lexi') return stories.filter((s) => LEXI_ITEM_IDS.has(s.id))
+  if (key === 'broker') return stories.filter((s) => !LEXI_ITEM_IDS.has(s.id))
+  return stories
 }
 
 export function getModuleBoardId(key: ModuleKey): number | null {

@@ -45,7 +45,7 @@ test('baseline fallback contains only board-backed modules (boardless ones hidde
   await handler({ headers: {} } as VercelRequest, res as VercelResponse)
   expect(res.statusCode).toBe(200)
   const body = res.body as { modules: Array<{ key: string }>; source?: string }
-  expect(body.modules.map((m) => m.key)).toEqual(['pe', 'uw', 'broker', 'bank', 'id', 'pl', 'paystub'])
+  expect(body.modules.map((m) => m.key)).toEqual(['pe', 'uw', 'lexi', 'broker', 'bank', 'id', 'pl', 'paystub'])
   expect(body.source).toBe('baseline')
   expect(res.headers['Cache-Control']).toContain('public')
   expect(res.headers['Cache-Control']).toContain('no-store')

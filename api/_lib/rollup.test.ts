@@ -5,9 +5,9 @@ import type { RawStory } from './monday'
 
 test('rolls up counts, percent, status, note, and cleaned titles', () => {
   const stories: RawStory[] = [
-    { name: 'F-01-06 · Eligibility evaluation', status: 'Done', module: null },
-    { name: 'CLTV calculation issue', status: 'In Progress', module: null },
-    { name: 'Series 2 rules', status: 'Ready to start', module: null },
+    { id: '1', name: 'F-01-06 · Eligibility evaluation', status: 'Done', module: null },
+    { id: '2', name: 'CLTV calculation issue', status: 'In Progress', module: null },
+    { id: '3', name: 'Series 2 rules', status: 'Ready to start', module: null },
   ]
   const m = buildDeliveryModule('pe', stories)
   expect(m.assumed).toBe(false)
@@ -23,7 +23,7 @@ test('rolls up counts, percent, status, note, and cleaned titles', () => {
 
 test('a live rebuild preserves the editorial brief (not overwritten by the rollup)', () => {
   const base = MODULES_BY_KEY['pe'] as { brief?: unknown }
-  const m = buildDeliveryModule('pe', [{ name: 'X', status: 'Done', module: null }])
+  const m = buildDeliveryModule('pe', [{ id: '1', name: 'X', status: 'Done', module: null }])
   expect(m.assumed).toBe(false)
   expect(m.brief).toBe(base.brief)
 })
@@ -48,14 +48,14 @@ test('zero-stories assumed: module without base assumedLabel gets fallback label
 
 test('assembleLivePayload emits only board-backed modules in order, source live', () => {
   const p = assembleLivePayload({}, '2026-07-08T00:00:00Z')
-  expect(p.modules.map((m) => m.key)).toEqual(['pe', 'uw', 'broker', 'bank', 'id', 'pl', 'paystub'])
+  expect(p.modules.map((m) => m.key)).toEqual(['pe', 'uw', 'lexi', 'broker', 'bank', 'id', 'pl', 'paystub'])
   expect(p.source).toBe('live')
   expect(p.builtAt).toBe('2026-07-08T00:00:00Z')
   expect(p.asOf).toBe('2026-07-08T00:00:00Z')
 })
 
 test('a module with stories goes live; a board-backed module with none is assumed', () => {
-  const p = assembleLivePayload({ pe: [{ name: 'X', status: 'Done', module: null }] }, 'now')
+  const p = assembleLivePayload({ pe: [{ id: '1', name: 'X', status: 'Done', module: null }] }, 'now')
   expect(p.modules.find((m) => m.key === 'pe')!.assumed).toBe(false)
   expect(p.modules.find((m) => m.key === 'uw')!.assumed).toBe(true)
 })
@@ -63,8 +63,8 @@ test('a module with stories goes live; a board-backed module with none is assume
 test('board stories count regardless of the module column (no routing)', () => {
   const p = assembleLivePayload(
     {
-      bank: [{ name: 'Done thing', status: 'Done', module: null }],
-      pl: [{ name: 'PL story', status: 'Ready to start', module: 'Tax Analyzer' }],
+      bank: [{ id: '1', name: 'Done thing', status: 'Done', module: null }],
+      pl: [{ id: '2', name: 'PL story', status: 'Ready to start', module: 'Tax Analyzer' }],
     },
     'now',
   )
@@ -76,20 +76,39 @@ test('board stories count regardless of the module column (no routing)', () => {
   expect(pl.counts).toEqual({ delivered: 0, inProgress: 0, remaining: 1 })
 })
 
-test('boardless modules (vt/lexi/tax) never appear in the payload', () => {
+test('boardless modules (vt/tax) never appear in the payload', () => {
   const p = assembleLivePayload({}, 'now')
-  for (const k of ['vt', 'lexi', 'tax']) {
+  for (const k of ['vt', 'tax']) {
     expect(p.modules.find((m) => m.key === k)).toBeUndefined()
   }
 })
 
+test('lexi rolls up its seven routed stories: 3 delivered, 4 remaining, 43 percent, in_progress', () => {
+  const lexiIds = [
+    '12451013226', '12482521999', '12482526623', '12451140139',
+    '12451122951', '12451013290', '12451008846',
+  ]
+  const stories: RawStory[] = lexiIds.map((id, i) => ({
+    id,
+    name: `Lexi ${id}`,
+    status: i < 3 ? 'Done' : '',
+    module: null,
+  }))
+  const m = buildDeliveryModule('lexi', stories)
+  expect(m.assumed).toBe(false)
+  expect(m.counts).toEqual({ delivered: 3, inProgress: 0, remaining: 4 })
+  expect(m.percent).toBe(43)
+  expect(m.status).toBe('in_progress')
+  expect(m.note).toBe('3 of 7 stories accepted.')
+})
+
 test('attaches cleaned sub-tasks to their parent story without changing counts or percent', () => {
   const withSubs: RawStory[] = [
-    { name: 'ID Analyzer', status: 'In Progress', module: null, subtasks: [
+    { id: '1', name: 'ID Analyzer', status: 'In Progress', module: null, subtasks: [
       { name: 'U-02-ID-01: Structured extraction', status: 'Done' },
       { name: 'U-02-ID-02: Provenance linking', status: '' },
     ] },
-    { name: 'Extraction spike', status: 'Done', module: null },
+    { id: '2', name: 'Extraction spike', status: 'Done', module: null },
   ]
   const m = buildDeliveryModule('id', withSubs)
   const item = m.buckets.inProgress[0]
@@ -100,14 +119,14 @@ test('attaches cleaned sub-tasks to their parent story without changing counts o
   ])
 
   const withoutSubs = buildDeliveryModule('id', [
-    { name: 'ID Analyzer', status: 'In Progress', module: null },
-    { name: 'Extraction spike', status: 'Done', module: null },
+    { id: '1', name: 'ID Analyzer', status: 'In Progress', module: null },
+    { id: '2', name: 'Extraction spike', status: 'Done', module: null },
   ])
   expect(m.counts).toEqual(withoutSubs.counts)
   expect(m.percent).toBe(withoutSubs.percent)
 })
 
 test('a story with no sub-tasks yields a bucket item without a subtasks field', () => {
-  const m = buildDeliveryModule('id', [{ name: 'Plain story', status: 'Done', module: null }])
+  const m = buildDeliveryModule('id', [{ id: '1', name: 'Plain story', status: 'Done', module: null }])
   expect(m.buckets.delivered[0].subtasks).toBeUndefined()
 })

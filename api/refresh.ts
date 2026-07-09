@@ -5,6 +5,7 @@ import { assembleLivePayload } from './_lib/rollup.js'
 import { writeLatest } from './_lib/blob.js'
 import {
   boardBackedKeys,
+  filterStoriesForModule,
   getCronSecret,
   getModuleBoardId,
   getModuleStatusColumnId,
@@ -33,7 +34,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
     const storiesByModule: Partial<Record<ModuleKey, RawStory[]>> = {}
     for (const r of results) {
-      if (r.stories !== null) storiesByModule[r.k] = r.stories
+      if (r.stories !== null) storiesByModule[r.k] = filterStoriesForModule(r.k, getModuleBoardId(r.k)!, r.stories)
     }
     const payload = assembleLivePayload(storiesByModule, new Date().toISOString())
     await writeLatest(payload)

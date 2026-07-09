@@ -6,6 +6,7 @@ export interface RawSubtask {
 }
 
 export interface RawStory {
+  id: string
   name: string
   status: string
   module: string | null
@@ -23,6 +24,7 @@ interface MondaySubitem {
 }
 
 interface MondayItem {
+  id: string
   name: string
   column_values: MondayColumnValue[]
   subitems?: MondaySubitem[]
@@ -58,6 +60,7 @@ async function mondayRequest(
 function toStory(item: MondayItem, statusColumnId: string, moduleColumnId?: string): RawStory {
   const textOf = (id: string) => item.column_values.find((c) => c.id === id)?.text ?? null
   return {
+    id: item.id,
     name: item.name,
     status: textOf(statusColumnId) ?? '',
     module: moduleColumnId ? textOf(moduleColumnId) : null,
@@ -78,7 +81,7 @@ export async function fetchBoardStories(opts: {
 }): Promise<RawStory[]> {
   const { token, boardId, statusColumnId = 'task_status', moduleColumnId, pageLimit = 100, fetchImpl = fetch } = opts
   const cols = JSON.stringify(moduleColumnId ? [statusColumnId, moduleColumnId] : [statusColumnId])
-  const itemFields = `name column_values(ids: ${cols}) { id text } subitems { name column_values(ids: ["${SUBITEM_STATUS_COLUMN_ID}"]) { id text } }`
+  const itemFields = `id name column_values(ids: ${cols}) { id text } subitems { name column_values(ids: ["${SUBITEM_STATUS_COLUMN_ID}"]) { id text } }`
   const out: RawStory[] = []
 
   const firstData = await mondayRequest(

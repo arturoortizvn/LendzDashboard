@@ -5,16 +5,16 @@ function jsonRes(data: unknown) {
   return { ok: true, json: () => Promise.resolve({ data }) }
 }
 
-test('paginates via cursor and maps name/status/module', async () => {
+test('paginates via cursor and maps id/name/status/module', async () => {
   const moduleColId = 'status_module'
   const page1 = { boards: [{ items_page: { cursor: 'C1', items: [
-    { name: 'F-01-06 · Eligibility', column_values: [
+    { id: '101', name: 'F-01-06 · Eligibility', column_values: [
       { id: 'task_status', text: 'Done' },
       { id: moduleColId, text: 'Pricing & Eligibility' },
     ] },
   ] } }] }
   const page2 = { next_items_page: { cursor: null, items: [
-    { name: 'CLTV issue', column_values: [
+    { id: '102', name: 'CLTV issue', column_values: [
       { id: 'task_status', text: 'In Progress' },
       { id: moduleColId, text: null },
     ] },
@@ -30,8 +30,8 @@ test('paginates via cursor and maps name/status/module', async () => {
 
   expect(fetchImpl).toHaveBeenCalledTimes(2)
   expect(stories).toEqual([
-    { name: 'F-01-06 · Eligibility', status: 'Done', module: 'Pricing & Eligibility', subtasks: [] },
-    { name: 'CLTV issue', status: 'In Progress', module: null, subtasks: [] },
+    { id: '101', name: 'F-01-06 · Eligibility', status: 'Done', module: 'Pricing & Eligibility', subtasks: [] },
+    { id: '102', name: 'CLTV issue', status: 'In Progress', module: null, subtasks: [] },
   ])
 })
 
@@ -63,7 +63,7 @@ test('throws a descriptive error when boards array is empty', async () => {
 
 test('reads a custom status column and omits the module column when absent', async () => {
   const page = { boards: [{ items_page: { cursor: null, items: [
-    { name: 'Implement Bank Statement Analyzer', column_values: [
+    { id: '55', name: 'Implement Bank Statement Analyzer', column_values: [
       { id: 'status', text: 'Not Started' },
     ] },
   ] } }] }
@@ -76,8 +76,9 @@ test('reads a custom status column and omits the module column when absent', asy
 
   const sentBody = JSON.parse((fetchImpl.mock.calls[0][1] as { body: string }).body) as { query: string }
   expect(sentBody.query).toContain('ids: ["status"]')
+  expect(sentBody.query).toContain('items { id name')
   expect(stories).toEqual([
-    { name: 'Implement Bank Statement Analyzer', status: 'Not Started', module: null, subtasks: [] },
+    { id: '55', name: 'Implement Bank Statement Analyzer', status: 'Not Started', module: null, subtasks: [] },
   ])
 })
 

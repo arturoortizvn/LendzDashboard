@@ -3,6 +3,7 @@ node_modules/
 
 # Build output
 dist/
+dist-server/
 dist-ssr/
 build/
 
@@ -16,9 +17,6 @@ build/
 .env
 .env.*
 !.env.example
-
-# Vercel
-.vercel/
 
 # Editor / OS
 .DS_Store
@@ -36,4 +34,3 @@ pnpm-debug.log*
 # Internal working docs (not tracked)
 *.pdf
 Meeting_Notes_*.md
-.vercel

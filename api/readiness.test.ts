@@ -1,5 +1,5 @@
 import { afterEach, expect, test, vi } from 'vitest'
-import type { VercelRequest, VercelResponse } from '@vercel/node'
+import type { Request, Response } from 'express'
 import type { ReadinessPayload } from '../shared/readiness'
 
 vi.mock('./_lib/blob.js', () => ({ readLatest: vi.fn() }))
@@ -8,11 +8,11 @@ import handler from './readiness'
 import { readLatest } from './_lib/blob.js'
 
 function mockRes() {
-  const res: Partial<VercelResponse> & { body?: unknown; statusCode?: number; headers: Record<string, string> } = {
+  const res: Partial<Response> & { body?: unknown; statusCode?: number; headers: Record<string, string> } = {
     headers: {},
-    setHeader(k: string, v: string) { this.headers[k] = v; return this as VercelResponse },
-    status(code: number) { this.statusCode = code; return this as VercelResponse },
-    json(payload: unknown) { this.body = payload; return this as VercelResponse },
+    setHeader(k: string, v: string) { this.headers[k] = v; return this as Response },
+    status(code: number) { this.statusCode = code; return this as Response },
+    json(payload: unknown) { this.body = payload; return this as Response },
   }
   return res
 }
@@ -28,7 +28,7 @@ test('serves the stored blob verbatim, publicly, no shared cache', async () => {
   } as unknown as ReadinessPayload
   vi.mocked(readLatest).mockResolvedValue(blob)
   const res = mockRes()
-  await handler({ headers: {} } as VercelRequest, res as VercelResponse)
+  await handler({ headers: {} } as Request, res as Response)
   expect(res.statusCode).toBe(200)
   const body = res.body as { modules: unknown[]; source: string; builtAt: string }
   expect(body.source).toBe('live')
@@ -42,7 +42,7 @@ test('serves the stored blob verbatim, publicly, no shared cache', async () => {
 test('baseline fallback contains only board-backed modules (boardless ones hidden)', async () => {
   vi.mocked(readLatest).mockResolvedValue(null)
   const res = mockRes()
-  await handler({ headers: {} } as VercelRequest, res as VercelResponse)
+  await handler({ headers: {} } as Request, res as Response)
   expect(res.statusCode).toBe(200)
   const body = res.body as { modules: Array<{ key: string }>; source?: string }
   expect(body.modules.map((m) => m.key)).toEqual(['pe', 'uw', 'lexi', 'broker', 'bank', 'id', 'pl', 'paystub'])

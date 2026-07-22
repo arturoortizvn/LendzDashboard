@@ -1,9 +1,9 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node'
+import type { Request, Response } from 'express'
 import { buildPayload } from '../shared/readiness.js'
 import { readLatest } from './_lib/blob.js'
 import { boardBackedKeys } from './_lib/config.js'
 
-export default async function handler(_req: VercelRequest, res: VercelResponse) {
+export default async function handler(_req: Request, res: Response) {
   res.setHeader('Cache-Control', 'public, no-store')
   const latest = await readLatest()
   if (latest) {

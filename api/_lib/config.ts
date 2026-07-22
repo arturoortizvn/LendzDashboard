@@ -141,9 +141,3 @@ export function getMondayToken(): string {
   if (!t) throw new Error('MONDAY_API_TOKEN is not set')
   return t
 }
-
-export function getCronSecret(): string {
-  const s = process.env.CRON_SECRET
-  if (!s) throw new Error('CRON_SECRET is not set')
-  return s
-}

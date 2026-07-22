@@ -1,50 +1,74 @@
-import { afterEach, expect, test, vi } from 'vitest'
-import { get, put } from '@vercel/blob'
+import { afterEach, beforeEach, expect, test, vi } from 'vitest'
+
+const upload = vi.fn()
+const downloadToBuffer = vi.fn()
+const getBlockBlobClient = vi.fn(() => ({ upload, downloadToBuffer }))
+const getContainerClient = vi.fn(() => ({ getBlockBlobClient }))
+
+vi.mock('@azure/storage-blob', () => ({
+  BlobServiceClient: vi.fn(() => ({ getContainerClient })),
+}))
+vi.mock('@azure/identity', () => ({
+  DefaultAzureCredential: vi.fn(() => ({})),
+}))
+
+import { BlobServiceClient } from '@azure/storage-blob'
 import { readLatest, writeLatest } from './blob'
 
-vi.mock('@vercel/blob', () => ({ put: vi.fn(), get: vi.fn() }))
-
-const streamOf = (value: unknown) => new Response(JSON.stringify(value)).body
-
+beforeEach(() => {
+  process.env.AZURE_STORAGE_ACCOUNT = 'lendzstore'
+  delete process.env.AZURE_BLOB_CONTAINER
+})
 afterEach(() => {
   vi.clearAllMocks()
-  delete process.env.BLOB_READ_WRITE_TOKEN
+  delete process.env.AZURE_STORAGE_ACCOUNT
+  delete process.env.AZURE_BLOB_CONTAINER
 })
 
-test('writeLatest stores a private object at the fixed path with overwrite enabled', async () => {
-  const payload = { asOf: 'x', modules: [], source: 'live' as const }
-  await writeLatest(payload)
-  expect(put).toHaveBeenCalledWith(
-    'readiness/latest.json',
-    JSON.stringify(payload),
-    expect.objectContaining({ access: 'private', contentType: 'application/json', addRandomSuffix: false, allowOverwrite: true }),
+test('writeLatest uploads the payload as JSON to the fixed blob via managed identity', async () => {
+  const payload = { asOf: 'x', builtAt: 'x', modules: [], source: 'live' as const }
+  await writeLatest(payload as never)
+  expect(BlobServiceClient).toHaveBeenCalledWith(
+    'https://lendzstore.blob.core.windows.net',
+    expect.anything(),
+  )
+  expect(getContainerClient).toHaveBeenCalledWith('readiness')
+  expect(getBlockBlobClient).toHaveBeenCalledWith('latest.json')
+  const body = JSON.stringify(payload)
+  expect(upload).toHaveBeenCalledWith(
+    body,
+    Buffer.byteLength(body),
+    expect.objectContaining({ blobHTTPHeaders: { blobContentType: 'application/json' } }),
   )
 })
 
-test('readLatest returns null when BLOB_READ_WRITE_TOKEN is not set', async () => {
-  const p = await readLatest()
-  expect(p).toBeNull()
-  expect(get).not.toHaveBeenCalled()
+test('writeLatest honors a custom container name', async () => {
+  process.env.AZURE_BLOB_CONTAINER = 'data'
+  await writeLatest({ asOf: 'x', builtAt: 'x', modules: [], source: 'live' } as never)
+  expect(getContainerClient).toHaveBeenCalledWith('data')
 })
 
-test('readLatest reads the private blob by pathname and parses it', async () => {
-  process.env.BLOB_READ_WRITE_TOKEN = 'blob_tok'
-  vi.mocked(get).mockResolvedValue({ stream: streamOf({ asOf: 'y', modules: [] }) } as never)
+test('writeLatest throws when AZURE_STORAGE_ACCOUNT is not set', async () => {
+  delete process.env.AZURE_STORAGE_ACCOUNT
+  await expect(writeLatest({ asOf: 'x', builtAt: 'x', modules: [], source: 'live' } as never)).rejects.toThrow()
+})
+
+test('readLatest returns null when AZURE_STORAGE_ACCOUNT is not set', async () => {
+  delete process.env.AZURE_STORAGE_ACCOUNT
+  const p = await readLatest()
+  expect(p).toBeNull()
+  expect(BlobServiceClient).not.toHaveBeenCalled()
+})
+
+test('readLatest downloads the blob and parses it', async () => {
+  downloadToBuffer.mockResolvedValue(Buffer.from(JSON.stringify({ asOf: 'y', modules: [] })))
   const p = await readLatest()
   expect(p).toEqual({ asOf: 'y', modules: [] })
-  expect(get).toHaveBeenCalledWith('readiness/latest.json', expect.objectContaining({ access: 'private' }))
+  expect(getBlockBlobClient).toHaveBeenCalledWith('latest.json')
 })
 
-test('readLatest returns null when the blob is missing', async () => {
-  process.env.BLOB_READ_WRITE_TOKEN = 'blob_tok'
-  vi.mocked(get).mockResolvedValue(null)
-  const p = await readLatest()
-  expect(p).toBeNull()
-})
-
-test('readLatest returns null when get throws', async () => {
-  process.env.BLOB_READ_WRITE_TOKEN = 'blob_tok'
-  vi.mocked(get).mockRejectedValue(new Error('BlobServiceNotAvailable'))
+test('readLatest returns null when the download throws (missing blob or outage)', async () => {
+  downloadToBuffer.mockRejectedValue(new Error('BlobNotFound'))
   const p = await readLatest()
   expect(p).toBeNull()
 })

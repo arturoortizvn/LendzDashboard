@@ -1,0 +1,13 @@
+node_modules
+dist
+dist-server
+.git
+.github
+*.test.ts
+*.test.tsx
+.env
+.env.*
+*.log
+.DS_Store
+docs
+*.pdf

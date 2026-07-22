@@ -1,0 +1,42 @@
+name: Deploy to Azure Container Apps
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# OIDC federated login to Azure needs a request token; no client secret is stored.
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Azure login (OIDC federated credentials)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Build & push image to ACR
+        run: az acr build --registry ${{ vars.ACR_NAME }} --image lendz-dashboard:${{ github.sha }} .
+
+      - name: Deploy web app
+        run: >
+          az containerapp update
+          --name ${{ vars.CONTAINERAPP_NAME }}
+          --resource-group ${{ vars.RESOURCE_GROUP }}
+          --image ${{ vars.ACR_NAME }}.azurecr.io/lendz-dashboard:${{ github.sha }}
+
+      - name: Deploy refresh job
+        run: >
+          az containerapp job update
+          --name ${{ vars.JOB_NAME }}
+          --resource-group ${{ vars.RESOURCE_GROUP }}
+          --image ${{ vars.ACR_NAME }}.azurecr.io/lendz-dashboard:${{ github.sha }}

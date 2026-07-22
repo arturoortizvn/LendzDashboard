@@ -1,42 +1,20 @@
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
-import type { VercelRequest, VercelResponse } from '@vercel/node'
 
-vi.mock('./_lib/monday.js', () => ({ fetchBoardStories: vi.fn() }))
-vi.mock('./_lib/blob.js', () => ({ writeLatest: vi.fn() }))
+vi.mock('./monday.js', () => ({ fetchBoardStories: vi.fn() }))
+vi.mock('./blob.js', () => ({ writeLatest: vi.fn() }))
 
-import handler from './refresh'
-import { fetchBoardStories } from './_lib/monday.js'
-import { writeLatest } from './_lib/blob.js'
-
-function mockRes() {
-  const res: Partial<VercelResponse> & { body?: unknown; statusCode?: number } = {
-    status(code: number) { this.statusCode = code; return this as VercelResponse },
-    json(payload: unknown) { this.body = payload; return this as VercelResponse },
-  }
-  return res
-}
+import { runRefresh } from './refresh-core'
+import { fetchBoardStories } from './monday.js'
+import { writeLatest } from './blob.js'
 
 beforeEach(() => {
-  process.env.CRON_SECRET = 'secret'
   process.env.MONDAY_API_TOKEN = 'tok'
 })
 afterEach(() => vi.clearAllMocks())
 
-const authed = { headers: { authorization: 'Bearer secret' } } as unknown as VercelRequest
-
-test('rejects requests without the cron secret', async () => {
-  const res = mockRes()
-  await handler({ headers: {} } as VercelRequest, res as VercelResponse)
-  expect(res.statusCode).toBe(401)
-  expect(fetchBoardStories).not.toHaveBeenCalled()
-  expect(writeLatest).not.toHaveBeenCalled()
-})
-
-test('fetches every board-backed board with its status column, assembles, writes, and returns 200', async () => {
+test('fetches every board-backed board with its status column, assembles, writes, returns a summary', async () => {
   vi.mocked(fetchBoardStories).mockResolvedValue([{ id: 'x', name: 'X', status: 'Done', module: null }])
-  const res = mockRes()
-  await handler(authed, res as VercelResponse)
-  expect(res.statusCode).toBe(200)
+  const result = await runRefresh()
   // Eight board-backed modules; lexi and broker both read the shared Broker LOS board.
   expect(fetchBoardStories).toHaveBeenCalledTimes(8)
   const calls = vi.mocked(fetchBoardStories).mock.calls.map((c) => c[0])
@@ -55,6 +33,7 @@ test('fetches every board-backed board with its status column, assembles, writes
     if (boardId !== 18420631446) expect(col).toBe('task_status')
   }
   expect(writeLatest).toHaveBeenCalledTimes(1)
+  expect(result.modules).toBeGreaterThan(0)
 })
 
 test('the shared Broker LOS board routes the seven Lexi items to lexi, the rest to broker', async () => {
@@ -75,9 +54,7 @@ test('the shared Broker LOS board routes the seven Lexi items to lexi, the rest 
         : [{ id: 'x', name: 'X', status: 'Done', module: null }],
     ),
   )
-  const res = mockRes()
-  await handler(authed, res as VercelResponse)
-  expect(res.statusCode).toBe(200)
+  await runRefresh()
 
   const payload = vi.mocked(writeLatest).mock.calls[0][0] as {
     modules: Array<{ key: string; buckets: { delivered: Array<{ title: string }> } }>
@@ -99,19 +76,15 @@ test('one board failing still writes; that module falls back to assumed, others 
       ? Promise.reject(new Error('board gone'))
       : Promise.resolve([{ id: 'x', name: 'X', status: 'Done', module: null }]),
   )
-  const res = mockRes()
-  await handler(authed, res as VercelResponse)
-  expect(res.statusCode).toBe(200)
+  await runRefresh()
   expect(writeLatest).toHaveBeenCalledTimes(1)
   const payload = vi.mocked(writeLatest).mock.calls[0][0] as { modules: Array<{ key: string; assumed: boolean }> }
   expect(payload.modules.find((m) => m.key === 'uw')!.assumed).toBe(true)
   expect(payload.modules.find((m) => m.key === 'pe')!.assumed).toBe(false)
 })
 
-test('all boards failing returns 500 and does NOT overwrite the blob', async () => {
+test('all boards failing throws and does NOT write the blob', async () => {
   vi.mocked(fetchBoardStories).mockRejectedValue(new Error('Monday down'))
-  const res = mockRes()
-  await handler(authed, res as VercelResponse)
-  expect(res.statusCode).toBe(500)
+  await expect(runRefresh()).rejects.toThrow(/all Monday board fetches failed/)
   expect(writeLatest).not.toHaveBeenCalled()
 })
